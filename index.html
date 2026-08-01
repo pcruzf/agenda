@@ -524,6 +524,18 @@ const Sync = {
     if (this.token && Date.now() < this.expira - 60000) return this.token;
     if (location.protocol === "file:") throw new Error("Abrí la app desde una dirección https, no como archivo local.");
     if (!window.google || !google.accounts || !google.accounts.oauth2) throw new Error("No cargó la librería de Google. Revisá la conexión.");
+
+    // Sin un toque del usuario el navegador bloquea la ventana de Google.
+    // Se permite un solo intento silencioso por carga: si falla, se espera
+    // el toque. Sin esto los reintentos automáticos quedaban en bucle.
+    if (!interactivo){
+      if (this.silencioUsado){
+        const e = new Error("Tocá para conectar con Google");
+        e.auth = true; throw e;
+      }
+      this.silencioUsado = true;
+    }
+
     const self = this;
     if (!this.cliente || this.clienteId !== db.config.driveId){
       this.clienteId = db.config.driveId;
@@ -536,10 +548,25 @@ const Sync = {
         if (r && r.access_token){
           self.token = r.access_token;
           self.expira = Date.now() + (Number(r.expires_in||3600)*1000);
+          self.otorgado = String(r.scope || "");
+          self.silencioUsado = false;
+          if (self.otorgado && self.otorgado.indexOf("spreadsheets") < 0){
+            Salas.estado = "error";
+            Salas.detalle = "No diste el permiso de planillas: reconectá y aceptá todas las casillas";
+          }
           ok(self.token);
-        } else mal(new Error((r && r.error_description) || "No se pudo autorizar"));
+        } else {
+          const e = new Error((r && r.error_description) || "No se pudo autorizar");
+          e.auth = true; mal(e);
+        }
       };
-      self.cliente.error_callback = e => mal(new Error((e && e.type) === "popup_closed" ? "Cerraste la ventana de Google" : "No se pudo autorizar"));
+      self.cliente.error_callback = e => {
+        const t = (e && e.type) || "";
+        const m = t === "popup_closed" ? "Cerraste la ventana de Google"
+                : t === "popup_failed_to_open" ? "El navegador bloqueó la ventana: tocá el botón de nuevo"
+                : "No se pudo autorizar";
+        const err = new Error(m); err.auth = true; mal(err);
+      };
       try{ self.cliente.requestAccessToken({ prompt: interactivo ? "consent" : "" }); }
       catch(e){ mal(e); }
     });
@@ -549,9 +576,22 @@ const Sync = {
     const o = Object.assign({}, opciones);
     o.headers = Object.assign({}, o.headers, { Authorization: "Bearer " + this.token });
     const r = await fetch(url, o);
-    if (r.status === 401 || r.status === 403){ this.token = null; throw new Error("auth"); }
-    if (!r.ok) throw new Error("Google respondió " + r.status);
-    return r;
+    if (r.ok) return r;
+
+    let cuerpo = null;
+    try{ cuerpo = await r.json(); }catch(e){}
+    const g = (cuerpo && cuerpo.error) || {};
+    const msg = g.message || "";
+    const razon = (g.details && g.details[0] && g.details[0].reason) ||
+                  (g.errors && g.errors[0] && g.errors[0].reason) || "";
+    const err = new Error(mensajeGoogle(r.status, razon, msg));
+    err.status = r.status; err.razon = razon; err.crudo = msg;
+
+    // Solo un 401 significa que el token venció. Un 403 puede ser una API sin
+    // habilitar o un permiso que falta: borrar el token ahí provocaba un loop.
+    if (r.status === 401){ this.token = null; err.auth = true; }
+    if (r.status === 403 && /insufficient|scope/i.test(msg)){ this.token = null; err.auth = true; }
+    throw err;
   },
 
   async buscarArchivo(){
@@ -591,6 +631,7 @@ const Sync = {
 
   programar(){
     if (!this.activo()) return;
+    if (this.fallos >= 3) return;      // no se reintenta solo: espera un toque
     clearTimeout(this.timer);
     this.timer = setTimeout(()=> this.correr(false), 4000);
   },
@@ -609,11 +650,12 @@ const Sync = {
       await Store.guardar(db);
       await this.subir(db);
       this.ultima = Date.now();
+      this.fallos = 0;
       this.marcar("listo");
       if (JSON.stringify({p:db.pacientes, c:db.consultas, g:db.config}) !== antes) render();
     }catch(e){
-      const msg = String(e && e.message || e);
-      this.marcar(msg === "auth" ? "auth" : "error", msg === "auth" ? "tocá Sincronizar ahora" : msg);
+      this.fallos = (this.fallos || 0) + 1;
+      this.marcar(e && e.auth ? "auth" : "error", String(e && e.message || e));
     }finally{
       this.corriendo = false;
     }
@@ -630,6 +672,22 @@ document.addEventListener("visibilitychange", ()=>{
    Ningún dato de pacientes sale del Drive privado de cada una. */
 const HOJA = "Reservas";
 const CABEZAL = ["id","fecha","hora","fin","minutos","sala","profesional","estado","actualizado","propietaria"];
+
+function mensajeGoogle(status, razon, msg){
+  msg = String(msg || "");
+  if (status === 401) return "Se venció el permiso: tocá para reconectar";
+  if (razon === "SERVICE_DISABLED" || /has not been used in project|API has not been used|is disabled/i.test(msg)){
+    const cual = /sheets/i.test(msg) ? "Google Sheets" : (/drive/i.test(msg) ? "Google Drive" : "esa");
+    return "Falta habilitar la API de " + cual + " en tu proyecto de Google Cloud";
+  }
+  if (status === 403 && /insufficient|scope/i.test(msg))
+    return "Falta el permiso de planillas: tocá reconectar y aceptá todas las casillas";
+  if (status === 403) return "Sin permiso sobre la planilla: pedí que te la compartan como editor";
+  if (status === 404) return "No se encontró la planilla: revisá el ID";
+  if (status === 400 && /parse range|Unable to parse/i.test(msg)) return "falta-pestana";
+  if (status === 429 || status === 503) return "Google está ocupado, reintentá en un rato";
+  return "Google respondió " + status + (msg ? ": " + msg.slice(0,110) : "");
+}
 
 const Salas = {
   estado: "off", detalle: "", ultima: 0, timer: null, corriendo: false,
@@ -669,8 +727,17 @@ const Salas = {
       });
   },
 
+  async crearPestana(){
+    await Sync.api("https://sheets.googleapis.com/v4/spreadsheets/"+
+      encodeURIComponent(db.config.hojaId)+":batchUpdate", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ requests:[{ addSheet:{ properties:{ title: HOJA } } }] })
+      });
+  },
+
   programar(){
     if (!this.activo()) return;
+    if (this.fallos >= 3) return;      // no se reintenta solo: espera un toque
     clearTimeout(this.timer);
     this.timer = setTimeout(()=> this.correr(false), 5000);
   },
@@ -678,10 +745,19 @@ const Salas = {
   async correr(interactivo){
     if (!this.activo() || this.corriendo) return;
     if (!navigator.onLine) return;
+    if (interactivo) this.fallos = 0;
     this.corriendo = true;
     try{
       await Sync.pedirToken(interactivo);
-      let filas = await this.leer();
+      let filas;
+      try{
+        filas = await this.leer();
+      }catch(e){
+        if (e && e.message === "falta-pestana"){
+          await this.crearPestana();     // la app crea la pestaña Reservas sola
+          filas = await this.leer();
+        } else throw e;
+      }
 
       // cabezal
       if (!filas.length || String(filas[0][0]||"").toLowerCase() !== "id"){
@@ -736,11 +812,15 @@ const Salas = {
       await this.agregar(nuevas);
 
       this.ultima = Date.now();
-      this.estado = "listo"; this.detalle = "";
+      this.estado = "listo"; this.detalle = ""; this.fallos = 0;
       render();
     }catch(e){
-      this.estado = "error";
+      this.fallos = (this.fallos || 0) + 1;
+      this.estado = e && e.auth ? "auth" : "error";
       this.detalle = String(e && e.message || e);
+      if (this.detalle === "falta-pestana")
+        this.detalle = "No pude crear la pestaña Reservas: revisá que tengas permiso de editor";
+      render();
     }finally{
       this.corriendo = false;
     }
@@ -1561,9 +1641,10 @@ function vistaAjustes(){
       <select id="aSala">${SALAS.map(x=>`<option value="${x.id}" ${(db.config.salaDef||"naranja")===x.id?"selected":""}>${x.nombre}</option>`).join("")}</select>
       <button class="btn" id="aEqG">Guardar</button>
       ${db.config.hojaId?`<a class="btn sec" href="https://docs.google.com/spreadsheets/d/${encodeURIComponent(db.config.hojaId)}/edit" target="_blank" rel="noopener">Abrir la planilla</a>`:""}
-      <div class="${Salas.estado==="error"?"aviso":"ocupadas"}" style="margin-top:10px">
-        Reservas de las demás: <b>${ajenas.length}</b> cargadas${Salas.ultima?" · al día":""}${Salas.detalle?" · "+esc(Salas.detalle):""}
-      </div>
+      ${Salas.detalle
+        ? `<div class="aviso" style="margin-top:10px"><b>La planilla no sincronizó.</b><br>${esc(Salas.detalle)}</div>
+           <button class="btn sec" id="aSalasR">Reintentar la planilla</button>`
+        : `<div class="ocupadas" style="margin-top:10px">Reservas de las demás: <b>${ajenas.length}</b> cargadas${Salas.ultima?" · al día":""}</div>`}
     </div>
 
     <h2 class="titulo" style="margin-top:22px">Sincronizar con Google Drive</h2>
@@ -1620,6 +1701,10 @@ function vistaAjustes(){
     vistaAjustes();
     Salas.correr(false).then(()=> vistaAjustes());
   };
+  if ($("#aSalasR")) $("#aSalasR").onclick = ()=>{
+    Salas.fallos = 0; Sync.silencioUsado = false;
+    Salas.correr(true).then(()=> vistaAjustes());
+  };
   $("#aDrvG").onclick = ()=>{
     const id = $("#aDrv").value.trim();
     db.config.driveId = id;
@@ -1631,7 +1716,10 @@ function vistaAjustes(){
   };
   $("#aSinc").onclick = ()=>{
     if (!db.config.driveId){ toast("Primero cargá el ID de cliente"); return; }
-    Sync.correr(true).then(()=> vistaAjustes());
+    Sync.fallos = 0; Salas.fallos = 0; Sync.silencioUsado = false;
+    Sync.correr(true)
+      .then(()=> db.config.hojaId ? Salas.correr(false) : null)
+      .then(()=> vistaAjustes());
   };
   if ($("#aDrvOff")) $("#aDrvOff").onclick = async ()=>{
     if (!confirm("Se deja de sincronizar. Los datos siguen en este dispositivo y en Drive. ¿Seguir?")) return;
