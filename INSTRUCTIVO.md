@@ -205,7 +205,7 @@ la app te avisa antes de guardar y te deja decidir.
 ### El tablero: ver la semana y el mes completos
 
 `tablero.html` es una página aparte, pensada para planificar. Se abre desde
-la app (**Ajustes → Ver el horario de todas**) o directo:
+**Horario general**, en la barra principal de la app, o directo:
 
 ```
 https://TUUSUARIO.github.io/agenda/tablero.html
@@ -216,7 +216,9 @@ inicio como un acceso más.
 
 Qué muestra:
 
-- **Semana**: las dos salas, una debajo de la otra, con los siete días. Cada
+- **Semana**: las dos salas, una debajo de la otra. Sábado y domingo solo
+  aparecen si alguien reservó ese fin de semana; si no, la semana se muestra
+  de lunes a viernes y las columnas quedan más anchas. Cada
   reserva es un bloque del color de la psicóloga. **Los huecos libres se
   dibujan con su duración** ("2 h libre"), así se ve de un vistazo dónde entra
   alguien. Los huecos solo aparecen en días que ya tienen algo agendado.
@@ -245,8 +247,7 @@ te da y pegala en `csvPublicado`, dentro del bloque `CONSULTORIO` de
 
 ### Ver las reservas fuera de la app
 
-Abrí la planilla desde el botón **Abrir la planilla** en Ajustes, o directo
-desde Drive. Cada fila es una reserva: fecha, hora, hora de fin, minutos,
+Si alguna vez necesitás ver el dato crudo, entrá a la planilla desde Drive. Cada fila es una reserva: fecha, hora, hora de fin, minutos,
 sala, profesional y estado.
 
 La planilla es el registro crudo. Para planificar conviene usar el tablero,
@@ -255,6 +256,23 @@ que lee estos mismos datos y los muestra por semana y por mes.
 **No edites ni borres filas de la pestaña `Reservas` a mano.** La app la
 reescribe: los cambios manuales se pierden y podés desordenar reservas de
 otras. Si hay que corregir algo, se hace desde la app.
+
+### Dar de baja varias consultas de una vez
+
+Cuando alguien suspende la terapia por vacaciones o deja de venir, no hace
+falta ir consulta por consulta. En **Pacientes → (la persona) → Suspender o
+eliminar varias**:
+
+1. Elegí el período (hay atajos de 2 semanas, 1 mes y 3 meses).
+2. Aparecen listadas todas las consultas de esa persona en ese período, ya
+   marcadas. Destildá las que quieras conservar.
+3. Elegí qué hacer:
+   - **Suspender**: quedan registradas como canceladas, no se facturan y la
+     sala se libera para las demás. Es lo indicado para vacaciones.
+   - **Eliminar**: desaparecen del todo. Pide confirmar dos veces.
+
+Solo alcanza a las consultas del período elegido: las anteriores y las que
+ya estaban canceladas no se tocan.
 
 ### Límites que conviene saber
 

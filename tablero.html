@@ -91,7 +91,7 @@ main{padding:18px 14px 60px;max-width:1180px;margin:0 auto}
   box-shadow:0 1px 2px rgba(11,61,51,.07);
 }
 .scroll{overflow-x:auto;scrollbar-width:thin}
-.rejilla{min-width:660px}
+.rejilla{min-width:calc(46px + var(--cols) * 88px)}
 .encDias{display:grid;grid-template-columns:46px repeat(var(--cols),1fr);border-bottom:1px solid var(--line)}
 .encDias .esq{border-right:1px solid var(--line);background:#F4F7F5}
 .encDias .d{
@@ -258,9 +258,9 @@ main{padding:18px 14px 60px;max-width:1180px;margin:0 auto}
    CONFIGURACIÓN — tiene que coincidir con la de index.html
    ========================================================================== */
 const CONSULTORIO = {
-  clienteId: "502751961059-7f8nr0fsnbfgccvae0td1qshs0dihkle.apps.googleusercontent.com",   // mismo ID de cliente OAuth que la app
-  hojaId:    "1gs_xYxJKDtrOfpZ6r1eUWm-9GKdJNP6n_gOiEZrlVB8",   // misma planilla de reservas
-  csvPublicado: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTn0U3WZIGt58GL1RfMGzk5l41qcij3dL6MrJfG-cRQUVkBFP4SmA-T9IkLZPOE_JXzcHxT4BfQckvO/pub?gid=0&single=true&output=csv" // opcional: ver el instructivo antes de usar esto
+  clienteId: "",   // mismo ID de cliente OAuth que la app
+  hojaId:    "",   // misma planilla de reservas
+  csvPublicado: "" // opcional: ver el instructivo antes de usar esto
 };
 
 const HOJA = "Reservas";
@@ -482,9 +482,13 @@ function huecosDe(ocupadas, desde, hasta){
 /* ---------- vista semana ---------- */
 function vistaSemana(){
   const lun = lunesDe(ancla);
-  const dias = []; for (let i=0;i<7;i++) dias.push(sumar(lun,i));
-  const rango = new Set(dias);
+  const todos = []; for (let i=0;i<7;i++) todos.push(sumar(lun,i));
+  const rango = new Set(todos);
   const sem = visibles().filter(r => rango.has(r.fecha));
+
+  // El fin de semana solo ocupa lugar si alguien reservó: si está vacío, se saca.
+  const dias = todos.filter((d,i)=> i < 5 || sem.some(r=>r.fecha===d));
+  const finSemana = dias.length > 5;
 
   let desde = 8*60, hasta = 20*60;
   sem.forEach(r=>{
@@ -536,21 +540,21 @@ function vistaSemana(){
     return `<section class="sala">
       <div class="salaCab">
         <h2><span class="pastilla" style="background:${sala.color}"></span>Sala ${sala.nombre}</h2>
-        <span class="dato"><b>${dela.length}</b> reserva${dela.length===1?"":"s"} · <b>${durTxt(libreTotal)}</b> libres de lunes a viernes</span>
+        <span class="dato"><b>${dela.length}</b> reserva${dela.length===1?"":"s"} · <b>${durTxt(libreTotal)}</b> libres${finSemana?" de lunes a viernes":""}</span>
       </div>
-      <div class="marco"><div class="scroll"><div class="rejilla" style="--cols:7">
+      <div class="marco"><div class="scroll"><div class="rejilla" style="--cols:${dias.length}">
         <div class="encDias"><div class="esq"></div>${cabDias}</div>
         <div class="cuerpo"><div class="horas">${horas}</div>${cols}</div>
       </div></div></div>
     </section>`;
   }).join("");
 
-  $("#periodo").innerHTML = rotuloSemana(dias) ;
+  $("#periodo").innerHTML = rotuloSemana(dias);
   return secciones;
 }
 
 function rotuloSemana(dias){
-  const a = fecha(dias[0]), b = fecha(dias[6]);
+  const a = fecha(dias[0]), b = fecha(dias[dias.length-1]);
   const mismoMes = a.getMonth() === b.getMonth();
   const txt = mismoMes
     ? `${a.getDate()} – ${b.getDate()} de ${MESES[b.getMonth()]}`
