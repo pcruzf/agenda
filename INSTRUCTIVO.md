@@ -166,8 +166,8 @@ pacientes en su propio Drive.
 
 ### Fijar los códigos en el archivo (muy recomendado)
 
-Antes de subir `index.html` a GitHub, abrilo con el Bloc de notas y completá
-el bloque que está arriba de todo:
+**Estos archivos ya vienen con los códigos del consultorio cargados**, en el
+bloque que está arriba de todo de `index.html` y de `tablero.html`:
 
 ```
 const CONSULTORIO = {
@@ -176,12 +176,16 @@ const CONSULTORIO = {
 };
 ```
 
-Con eso, ninguna psicóloga tiene que pegar códigos: la app los toma sola.
-**Pasar el ID de cliente por WhatsApp es la causa más común del
+Por eso ninguna psicóloga tiene que pegar nada: la app los toma sola.
+**Pasar el ID de cliente por mensaje era la causa más común del
 `Error 401: invalid_client`**, porque el texto llega cortado.
 
-Si más adelante cambiás algún código acá, se corrige en todos los
-dispositivos con solo recargar.
+Si algún día cambian los códigos, se editan acá y se corrigen en todos los
+dispositivos con solo recargar. Al hacer un commit no hay que tocar nada:
+los valores viajan en el archivo.
+
+Para confirmar que quedó bien: en **Ajustes → Diagnóstico** tiene que decir
+*ID fijado en el archivo: sí*.
 
 ### Configuración en cada teléfono o PC
 
@@ -228,22 +232,34 @@ Qué muestra:
   psicólogas, para ver la agenda de una sola persona.
 - **Imprimir**: sale apaisado y con los colores, para colgar en la pared.
 - Flechas ← → para moverse, tecla **T** para volver a hoy.
+- La flecha **‹** de arriba a la izquierda vuelve a la agenda. En el celular
+  el botón atrás del sistema también funciona: el tablero abre dentro de la
+  app, no en una ventana aparte.
 
 Se actualiza sola cada 5 minutos y al volver a la pestaña.
 
 **Antes de subirlo**, completá el bloque `CONSULTORIO` de `tablero.html` con
 el mismo ID de cliente y el mismo ID de planilla que pusiste en `index.html`.
 
-#### Si querés que se abra sin pedir cuenta de Google
+#### El tablero abre sin pedir cuenta de Google
 
-Se puede, pero pensalo: la planilla no tiene datos de pacientes, pero sí los
-nombres de las psicólogas y sus horarios de trabajo, y quedaría accesible para
-cualquiera que tenga el enlace.
+Está configurado con la planilla publicada como CSV (`csvPublicado`), así que
+cualquiera del equipo lo abre sin login. Eso evita de raíz los errores de
+permisos, pero tiene una contrapartida que conviene tener presente:
 
-Si aun así conviene: en la planilla, *Archivo → Compartir → Publicar en la
-web*, elegí la pestaña `Reservas` y el formato **CSV**. Copiá la dirección que
-te da y pegala en `csvPublicado`, dentro del bloque `CONSULTORIO` de
-`tablero.html`. Con eso el tablero deja de pedir login.
+**Cualquiera que llegue al enlace ve los nombres de las psicólogas y sus
+horarios de trabajo.** No hay datos de pacientes, pero sí queda expuesto quién
+trabaja y cuándo. Como el repositorio de GitHub es público, la dirección del
+CSV es hallable.
+
+Para volver a exigir cuenta de Google: vaciá `csvPublicado` en `tablero.html`
+y despublicá la planilla (*Archivo → Compartir → Publicar en la web →
+Detener publicación*). El tablero pasa a pedir login solo, sin más cambios.
+
+Una diferencia práctica: lo publicado por Google se refresca cada algunos
+minutos, así que el tablero puede mostrar una reserva recién hecha con un poco
+de retraso. La app, en cambio, chequea la planilla en vivo al agendar, así que
+el aviso de sala ocupada siempre está al día.
 
 ### Ver las reservas fuera de la app
 

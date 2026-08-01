@@ -42,6 +42,13 @@ header{
   position:sticky;top:0;z-index:20;
 }
 .marca{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.volver{
+  flex:0 0 auto;align-self:center;display:inline-flex;align-items:center;justify-content:center;
+  width:34px;height:34px;margin-right:-2px;border-radius:9px;text-decoration:none;
+  background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.18);
+  color:#fff;font-size:21px;line-height:1;padding-bottom:3px;
+}
+.volver:hover{background:rgba(255,255,255,.18)}
 h1{font-family:var(--serif);font-size:20px;font-weight:600;margin:0;letter-spacing:-.2px}
 .marca .sede{font-size:12px;color:#8FB3AA;letter-spacing:.6px;text-transform:uppercase}
 .barra{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
@@ -213,7 +220,7 @@ main{padding:18px 14px 60px;max-width:1180px;margin:0 auto}
   body{background:#fff;font-size:11px}
   header{position:static;background:#fff;color:#000;padding:0 0 10px;border-bottom:2px solid var(--pine)}
   h1{font-size:17px;color:var(--pine)}
-  .marca .sede, .nav, .modo, .filtros, .pie, .aviso{display:none!important}
+  .marca .sede, .nav, .modo, .filtros, .pie, .aviso, .volver{display:none!important}
   .periodo{color:#000}
   .periodo em{color:#555}
   main{padding:0;max-width:none}
@@ -230,6 +237,7 @@ main{padding:18px 14px 60px;max-width:1180px;margin:0 auto}
 
 <header>
   <div class="marca">
+    <a class="volver" href="index.html" id="volver" aria-label="Volver a la agenda">‹</a>
     <h1>Horario del consultorio</h1>
     <span class="sede">salas naranja y azul</span>
   </div>
@@ -258,9 +266,14 @@ main{padding:18px 14px 60px;max-width:1180px;margin:0 auto}
    CONFIGURACIÓN — tiene que coincidir con la de index.html
    ========================================================================== */
 const CONSULTORIO = {
-  clienteId: "502751961059-7f8nr0fsnbfgccvae0td1qshs0dihkle.apps.googleusercontent.com",   // mismo ID de cliente OAuth que la app
-  hojaId:    "1gs_xYxJKDtrOfpZ6r1eUWm-9GKdJNP6n_gOiEZrlVB8",   // misma planilla de reservas
-  csvPublicado: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTn0U3WZIGt58GL1RfMGzk5l41qcij3dL6MrJfG-cRQUVkBFP4SmA-T9IkLZPOE_JXzcHxT4BfQckvO/pub?gid=0&single=true&output=csv" // opcional: ver el instructivo antes de usar esto
+  clienteId: "502751961059-7f8nr0fsnbfgccvae0td1qshs0dihkle.apps.googleusercontent.com",
+  hojaId:    "1gs_xYxJKDtrOfpZ6r1eUWm-9GKdJNP6n_gOiEZrlVB8",
+
+  /* Planilla publicada como CSV: con esto el tablero abre sin pedir cuenta de
+     Google. A cambio, cualquiera con el enlace ve los nombres y horarios de
+     las psicólogas (nunca los pacientes). Para volver a exigir login: vaciar
+     esta línea y despublicar la planilla desde Archivo → Compartir. */
+  csvPublicado: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTn0U3WZIGt58GL1RfMGzk5l41qcij3dL6MrJfG-cRQUVkBFP4SmA-T9IkLZPOE_JXzcHxT4BfQckvO/pub?gid=0&single=true&output=csv"
 };
 
 const HOJA = "Reservas";
@@ -377,9 +390,14 @@ const Datos = {
   },
 
   async traerCSV(){
-    const r = await fetch(CONSULTORIO.csvPublicado);
-    if (!r.ok) throw pito("No se pudo leer la planilla publicada (" + r.status + ").");
-    return partirCSV(await r.text());
+    // Se agrega un parámetro variable para que el navegador no devuelva una
+    // copia guardada. Google igual refresca lo publicado cada pocos minutos.
+    const u = CONSULTORIO.csvPublicado + (CONSULTORIO.csvPublicado.indexOf("?")>=0 ? "&" : "?") + "t=" + Date.now();
+    const r = await fetch(u, { cache: "no-store" });
+    if (!r.ok) throw pito("No se pudo leer la planilla publicada (" + r.status + "). Puede que se haya despublicado.");
+    const filas = partirCSV(await r.text());
+    if (!filas.length) throw pito("La planilla publicada llegó vacía. Revisá que esté publicada la pestaña Reservas.");
+    return filas;
   }
 };
 
@@ -678,6 +696,14 @@ document.addEventListener("visibilitychange", ()=>{
   if (!document.hidden && ultima && Date.now()-ultima > 120000) cargar(false);
 });
 window.addEventListener("online", ()=> cargar(false));
+
+/* Si se llegó desde la agenda, se vuelve por el historial para no perder
+   la pantalla en la que estaba. Si el tablero se abrió directo (favorito,
+   pantalla de inicio), el enlace normal a index.html hace su trabajo. */
+$("#volver").addEventListener("click", e=>{
+  const mismo = document.referrer && document.referrer.indexOf(location.origin) === 0;
+  if (mismo && history.length > 1){ e.preventDefault(); history.back(); }
+});
 
 /* ---------- arranque ---------- */
 marcarModo();

@@ -1,7 +1,7 @@
 /* Permite abrir la agenda sin conexión.
    Si cambiás index.html, subí también este archivo con un CACHE nuevo
    (por ejemplo "agenda-v3") para que el celular tome la versión nueva. */
-const CACHE = "agenda-v9";
+const CACHE = "agenda-v10";
 const BASE = [ "./", "./index.html", "./tablero.html", "./manifest.json",
                "./icon-180.png", "./icon-192.png", "./icon-512.png" ];
 
