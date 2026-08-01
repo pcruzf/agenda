@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B3D33">
+<meta name="apple-mobile-web-app-title" content="Horario">
+<title>Horario del consultorio</title>
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root{
+  --pine:#0B3D33;
+  --pine-soft:#12574A;
+  --ochre:#C98A17;
+  --paper:#E9EDEA;
+  --surface:#FFFFFF;
+  --ink:#16211F;
+  --ink-soft:#5C6B67;
+  --line:#D3DBD7;
+  --hair:#E4EAE7;
+  --libre:#F5F8F6;
+  --naranja:#C96A17;
+  --azul:#2A6099;
+  --serif:Georgia,"Noto Serif","Times New Roman",serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --fila:26px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--sans);background:var(--paper);color:var(--ink);
+  font-size:15px;line-height:1.45;
+}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+/* ---------- encabezado ---------- */
+header{
+  background:var(--pine);color:#fff;
+  padding:calc(14px + env(safe-area-inset-top)) 20px 0;
+  position:sticky;top:0;z-index:20;
+}
+.marca{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--serif);font-size:20px;font-weight:600;margin:0;letter-spacing:-.2px}
+.marca .sede{font-size:12px;color:#8FB3AA;letter-spacing:.6px;text-transform:uppercase}
+.barra{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+.periodo{
+  font-family:var(--serif);font-size:17px;font-weight:600;flex:1;min-width:190px;
+}
+.periodo em{font-style:normal;color:#8FB3AA;font-weight:400;font-size:14px;margin-left:6px}
+.nav{display:flex;gap:6px}
+.nav button, .modo button{
+  background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.18);color:#fff;
+  font-family:inherit;font-size:14px;padding:7px 13px;border-radius:9px;cursor:pointer;
+}
+.nav button{min-width:40px}
+.modo{display:flex;gap:0;border:1px solid rgba(255,255,255,.18);border-radius:9px;overflow:hidden}
+.modo button{border:0;border-radius:0;border-right:1px solid rgba(255,255,255,.18)}
+.modo button:last-child{border-right:0}
+.modo button[aria-pressed="true"]{background:#fff;color:var(--pine);font-weight:600}
+.nav button:hover, .modo button:hover{background:rgba(255,255,255,.18)}
+.modo button[aria-pressed="true"]:hover{background:#fff}
+.filtros{
+  display:flex;gap:7px;overflow-x:auto;padding:12px 0 13px;scrollbar-width:none;
+}
+.filtros::-webkit-scrollbar{display:none}
+.f{
+  flex:0 0 auto;background:transparent;border:1px solid rgba(255,255,255,.24);
+  color:#CFE0DB;border-radius:999px;padding:5px 12px;font-size:13px;
+  font-family:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+}
+.f[aria-pressed="true"]{background:#fff;border-color:#fff;color:var(--pine);font-weight:600}
+.f .pt{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+
+main{padding:18px 14px 60px;max-width:1180px;margin:0 auto}
+
+/* ---------- sala ---------- */
+.sala{margin-bottom:26px}
+.salaCab{display:flex;align-items:baseline;gap:10px;margin:0 0 9px 2px}
+.salaCab h2{
+  font-family:var(--serif);font-size:16px;font-weight:600;margin:0;
+  display:inline-flex;align-items:center;gap:8px;
+}
+.pastilla{width:11px;height:11px;border-radius:3px;display:inline-block}
+.salaCab .dato{font-size:12.5px;color:var(--ink-soft)}
+.salaCab .dato b{color:var(--pine);font-weight:600}
+
+.marco{
+  background:var(--surface);border-radius:12px;overflow:hidden;
+  box-shadow:0 1px 2px rgba(11,61,51,.07);
+}
+.scroll{overflow-x:auto;scrollbar-width:thin}
+.rejilla{min-width:660px}
+.encDias{display:grid;grid-template-columns:46px repeat(var(--cols),1fr);border-bottom:1px solid var(--line)}
+.encDias .esq{border-right:1px solid var(--line);background:#F4F7F5}
+.encDias .d{
+  text-align:center;padding:7px 3px 8px;border-right:1px solid var(--hair);background:#F4F7F5;
+}
+.encDias .d:last-child{border-right:0}
+.encDias .d .sem{font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--ink-soft)}
+.encDias .d .fec{font-size:16px;font-weight:600;letter-spacing:-.3px;margin-top:1px}
+.encDias .d.hoy{background:#FBF3E0}
+.encDias .d.hoy .fec{color:#8A6A16}
+.encDias .d.finde .sem, .encDias .d.finde .fec{color:#9AA8A4}
+
+.cuerpo{display:grid;grid-template-columns:46px repeat(var(--cols),1fr);position:relative}
+.horas{border-right:1px solid var(--line);background:#F4F7F5}
+.horas div{
+  height:calc(var(--fila) * 2);font-size:11px;color:var(--ink-soft);
+  text-align:right;padding:2px 6px 0 0;border-bottom:1px solid var(--hair);
+}
+.dia{
+  position:relative;border-right:1px solid var(--hair);
+  background:repeating-linear-gradient(
+    to bottom,
+    transparent 0, transparent calc(var(--fila) * 2 - 1px),
+    var(--hair) calc(var(--fila) * 2 - 1px), var(--hair) calc(var(--fila) * 2)
+  );
+}
+.dia:last-child{border-right:0}
+.dia.finde{background-color:#FAFBFB}
+.dia.hoy{background-color:#FEFCF6}
+
+/* bloques */
+.b{
+  position:absolute;left:3px;right:3px;border-radius:6px;padding:3px 6px;
+  overflow:hidden;font-size:11.5px;line-height:1.25;
+}
+.b.res{color:#fff}
+.b.res .q{font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.b.res .h{opacity:.82;font-size:10.5px}
+/* el hueco libre es el protagonista: se mide y se nombra */
+.b.hueco{
+  background:var(--libre);border:1px dashed #CFDAD5;color:#93A19C;
+  display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;
+}
+.b.hueco .dur{font-weight:600;color:#6E7D78}
+.b.hueco.chico{font-size:10px;padding:0 4px}
+
+/* ---------- mes ---------- */
+.mes{background:var(--surface);border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(11,61,51,.07)}
+.mesCab{display:grid;grid-template-columns:repeat(7,1fr);background:#F4F7F5;border-bottom:1px solid var(--line)}
+.mesCab div{
+  text-align:center;font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;
+  color:var(--ink-soft);padding:8px 2px;font-weight:600;
+}
+.mesGrid{display:grid;grid-template-columns:repeat(7,1fr)}
+.celda{
+  min-height:96px;border-right:1px solid var(--hair);border-bottom:1px solid var(--hair);
+  padding:6px 7px 8px;cursor:pointer;
+}
+.celda:nth-child(7n){border-right:0}
+.celda.fuera{background:#FAFBFB}
+.celda.fuera .n{color:#BAC5C1}
+.celda.hoy{background:#FEFCF6}
+.celda:hover{background:#F4F7F5}
+.celda .n{font-size:13px;font-weight:600;color:var(--ink-soft)}
+.celda.hoy .n{color:#8A6A16}
+.celda .lista{margin-top:5px;display:flex;flex-direction:column;gap:2px}
+.ev{
+  font-size:10.5px;border-radius:4px;padding:1px 5px;color:#fff;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.ev .hh{opacity:.8;font-variant-numeric:tabular-nums}
+.mas{font-size:10px;color:var(--ink-soft);padding-left:2px}
+.celda .libre{font-size:10px;color:#9AA8A4;margin-top:4px}
+
+/* ---------- estados ---------- */
+.aviso{
+  background:var(--surface);border-left:3px solid var(--ochre);border-radius:0 10px 10px 0;
+  padding:14px 16px;margin-bottom:16px;font-size:14px;line-height:1.55;
+  box-shadow:0 1px 2px rgba(11,61,51,.07);
+}
+.aviso b{display:block;font-family:var(--serif);font-size:15px;margin-bottom:3px}
+.aviso.malo{border-left-color:#B4462F}
+.btn{
+  display:inline-block;background:var(--pine);color:#fff;border:0;border-radius:9px;
+  padding:11px 20px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;
+  margin-top:11px;text-decoration:none;
+}
+.btn.sec{background:var(--surface);color:var(--pine);border:1px solid var(--line)}
+.centro{text-align:center;padding:46px 20px;color:var(--ink-soft)}
+.centro b{display:block;font-family:var(--serif);font-size:18px;color:var(--ink);margin-bottom:5px;font-weight:600}
+.pie{
+  display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+  margin-top:22px;font-size:12.5px;color:var(--ink-soft);
+}
+.pie button{
+  background:none;border:1px solid var(--line);color:var(--pine);border-radius:8px;
+  padding:6px 13px;font-family:inherit;font-size:12.5px;cursor:pointer;font-weight:600;
+}
+.cargando{
+  height:2px;background:linear-gradient(90deg,transparent,var(--ochre),transparent);
+  background-size:40% 100%;background-repeat:no-repeat;animation:corre 1.1s infinite linear;
+}
+@keyframes corre{from{background-position:-40% 0}to{background-position:140% 0}}
+:focus-visible{outline:2px solid var(--ochre);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+@media (max-width:640px){
+  :root{--fila:23px}
+  main{padding:14px 10px 50px}
+  h1{font-size:18px}
+  .celda{min-height:74px;padding:4px 4px 6px}
+  .celda .lista{gap:1px}
+}
+
+/* ---------- para colgar en la pared ---------- */
+@media print{
+  @page{size:landscape;margin:12mm}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{background:#fff;font-size:11px}
+  header{position:static;background:#fff;color:#000;padding:0 0 10px;border-bottom:2px solid var(--pine)}
+  h1{font-size:17px;color:var(--pine)}
+  .marca .sede, .nav, .modo, .filtros, .pie, .aviso{display:none!important}
+  .periodo{color:#000}
+  .periodo em{color:#555}
+  main{padding:0;max-width:none}
+  .marco, .mes{box-shadow:none;border:1px solid #B9C4C0;border-radius:0}
+  .scroll{overflow:visible}
+  .rejilla{min-width:0}
+  .sala{break-inside:avoid;margin-bottom:14px}
+  .b.hueco{background:#fff;border-color:#D8E0DD}
+  .celda{min-height:70px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="marca">
+    <h1>Horario del consultorio</h1>
+    <span class="sede">salas naranja y azul</span>
+  </div>
+  <div class="barra">
+    <div class="periodo" id="periodo">Cargando…</div>
+    <div class="modo">
+      <button id="mSem" aria-pressed="true">Semana</button>
+      <button id="mMes" aria-pressed="false">Mes</button>
+    </div>
+    <div class="nav">
+      <button id="ant" aria-label="Anterior">‹</button>
+      <button id="hoy">Hoy</button>
+      <button id="sig" aria-label="Siguiente">›</button>
+    </div>
+  </div>
+  <div class="filtros" id="filtros"></div>
+</header>
+
+<div id="progreso"></div>
+<main id="vista"><div class="centro">Cargando el horario…</div></main>
+
+<script>
+"use strict";
+
+/* ==========================================================================
+   CONFIGURACIÓN — tiene que coincidir con la de index.html
+   ========================================================================== */
+const CONSULTORIO = {
+  clienteId: "",   // mismo ID de cliente OAuth que la app
+  hojaId:    "",   // misma planilla de reservas
+  csvPublicado: "" // opcional: ver el instructivo antes de usar esto
+};
+
+const HOJA = "Reservas";
+const ALCANCE = "https://www.googleapis.com/auth/spreadsheets.readonly";
+
+const SALAS = [
+  { id:"naranja", nombre:"Naranja", color:"#C96A17" },
+  { id:"azul",    nombre:"Azul",    color:"#2A6099" }
+];
+/* Un color por psicóloga, estable: el mismo nombre da siempre el mismo tono.
+   La sala ya se distingue por la sección, así que el color codifica la persona. */
+const TONOS = ["#1F7A5C","#2A6099","#8E4585","#B4462F","#C98A17","#4A6B8A","#7A6A3E","#A6547A"];
+
+const DIAS = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+const DIAS_C = ["dom","lun","mar","mié","jue","vie","sáb"];
+const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","setiembre","octubre","noviembre","diciembre"];
+
+/* ---------- utilidades ---------- */
+const $ = s => document.querySelector(s);
+const esc = t => String(t==null?"":t).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function iso(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function fecha(s){ const p=String(s).split("-"); return new Date(+p[0], +p[1]-1, +p[2]); }
+function hoyISO(){ return iso(new Date()); }
+function sumar(s,n){ const d=fecha(s); d.setDate(d.getDate()+n); return iso(d); }
+function minutos(h){ const p=String(h||"0:0").split(":"); return (parseInt(p[0],10)||0)*60+(parseInt(p[1],10)||0); }
+function aHora(m){ m=Math.max(0,Math.round(m)); return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"); }
+function durTxt(m){
+  if (m < 60) return m+" min";
+  const h=Math.floor(m/60), r=m%60;
+  return r ? h+" h "+r+"′" : h+" h";
+}
+function lunesDe(s){ const d=fecha(s); const w=(d.getDay()+6)%7; return sumar(s,-w); }
+const salaDe = id => SALAS.find(x=>x.id===id) || SALAS[0];
+
+function tonoDe(nombre){
+  let h = 0;
+  const s = String(nombre||"");
+  for (let i=0;i<s.length;i++) h = (h*31 + s.charCodeAt(i)) >>> 0;
+  return TONOS[h % TONOS.length];
+}
+
+/* ---------- estado ---------- */
+let reservas = [];
+let modo = "semana";
+let ancla = hoyISO();
+let ocultas = new Set();     // psicólogas destildadas
+let salasOn = new Set(SALAS.map(s=>s.id));
+let ultima = 0, cargando = false, problema = null;
+
+/* ---------- lectura de la planilla ---------- */
+const Datos = {
+  token:null, expira:0, cliente:null, silencioUsado:false,
+
+  async pedirToken(interactivo){
+    if (this.token && Date.now() < this.expira - 60000) return this.token;
+    if (location.protocol === "file:") throw pito("Abrí esta página desde su dirección https, no como archivo suelto.");
+    if (!window.google || !google.accounts || !google.accounts.oauth2)
+      throw pito("No cargó la librería de Google. Revisá la conexión y recargá.");
+    if (!CONSULTORIO.clienteId) throw pito("Falta completar el ID de cliente en el archivo tablero.html.");
+    if (!interactivo){
+      if (this.silencioUsado) throw pito("Entrá con tu cuenta de Google para ver el horario.", true);
+      this.silencioUsado = true;
+    }
+    const self = this;
+    if (!this.cliente){
+      this.cliente = google.accounts.oauth2.initTokenClient({
+        client_id: CONSULTORIO.clienteId, scope: ALCANCE, callback: ()=>{}
+      });
+    }
+    return new Promise((ok, mal)=>{
+      self.cliente.callback = r => {
+        if (r && r.access_token){
+          self.token = r.access_token;
+          self.expira = Date.now() + (Number(r.expires_in||3600)*1000);
+          self.silencioUsado = false;
+          ok(self.token);
+        } else mal(pito((r && r.error_description) || "Google no autorizó el acceso.", true));
+      };
+      self.cliente.error_callback = e => {
+        const t = (e && e.type) || "";
+        mal(pito(t === "popup_closed" ? "Se cerró la ventana de Google antes de terminar."
+               : t === "popup_failed_to_open" ? "El navegador bloqueó la ventana de Google. Tocá el botón de nuevo."
+               : "Google no autorizó el acceso.", true));
+      };
+      try{ self.cliente.requestAccessToken({ prompt: interactivo ? "consent" : "" }); }
+      catch(e){ mal(pito("Google no autorizó el acceso.", true)); }
+    });
+  },
+
+  async traer(interactivo){
+    if (CONSULTORIO.csvPublicado) return this.traerCSV();
+    const falta = [];
+    if (!CONSULTORIO.clienteId) falta.push("el ID de cliente");
+    if (!CONSULTORIO.hojaId) falta.push("el ID de la planilla");
+    if (falta.length)
+      throw pito("Falta completar " + falta.join(" y ") + " en el bloque CONSULTORIO del archivo tablero.html.");
+    await this.pedirToken(interactivo);
+    const r = await fetch("https://sheets.googleapis.com/v4/spreadsheets/"+
+      encodeURIComponent(CONSULTORIO.hojaId)+"/values/"+HOJA+"!A1:J20000",
+      { headers: { Authorization: "Bearer " + this.token } });
+    if (!r.ok){
+      let m = "";
+      try{ m = (await r.json()).error.message || ""; }catch(e){}
+      if (r.status === 401){ this.token = null; throw pito("Se venció el permiso de Google.", true); }
+      if (/has not been used|is disabled/i.test(m))
+        throw pito("Falta habilitar la API de Google Sheets en el proyecto de Google Cloud.");
+      if (r.status === 403) throw pito("Tu cuenta no tiene acceso a la planilla. Pedí que te la compartan.");
+      if (r.status === 404) throw pito("No se encontró la planilla. Revisá el ID en tablero.html.");
+      if (/Unable to parse range/i.test(m))
+        throw pito("La planilla todavía no tiene la pestaña Reservas. Se crea sola cuando alguien sincroniza desde la app.");
+      throw pito("Google respondió " + r.status + (m ? ": " + m.slice(0,90) : ""));
+    }
+    return ((await r.json()).values || []);
+  },
+
+  async traerCSV(){
+    const r = await fetch(CONSULTORIO.csvPublicado);
+    if (!r.ok) throw pito("No se pudo leer la planilla publicada (" + r.status + ").");
+    return partirCSV(await r.text());
+  }
+};
+
+function pito(msg, auth){ const e = new Error(msg); e.auth = !!auth; return e; }
+
+function partirCSV(txt){
+  const filas = []; let f = [], campo = "", comillas = false;
+  for (let i=0;i<txt.length;i++){
+    const c = txt[i];
+    if (comillas){
+      if (c === '"'){ if (txt[i+1] === '"'){ campo += '"'; i++; } else comillas = false; }
+      else campo += c;
+    } else if (c === '"') comillas = true;
+    else if (c === ','){ f.push(campo); campo = ""; }
+    else if (c === '\n'){ f.push(campo); filas.push(f); f = []; campo = ""; }
+    else if (c !== '\r') campo += c;
+  }
+  if (campo !== "" || f.length){ f.push(campo); filas.push(f); }
+  return filas;
+}
+
+function interpretar(filas){
+  const out = [];
+  for (let i=0;i<filas.length;i++){
+    const f = filas[i] || [];
+    if (!f[0] || String(f[0]).toLowerCase() === "id") continue;
+    const estado = String(f[7]||"reservada").toLowerCase();
+    if (estado === "borrada" || estado === "cancelada") continue;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(f[1]||""))) continue;
+    const dur = parseInt(f[4],10) || 60;
+    out.push({
+      id: f[0], fecha: f[1], hora: String(f[2]||"00:00").slice(0,5), dur: dur,
+      sala: String(f[5]||"").toLowerCase().indexOf("azul") >= 0 ? "azul" : "naranja",
+      prof: String(f[6]||"").trim() || "Sin nombre"
+    });
+  }
+  return out.sort((a,b)=> (a.fecha+a.hora).localeCompare(b.fecha+b.hora));
+}
+
+async function cargar(interactivo){
+  if (cargando) return;
+  cargando = true; problema = null;
+  $("#progreso").className = "cargando";
+  try{
+    reservas = interpretar(await Datos.traer(interactivo));
+    ultima = Date.now();
+  }catch(e){
+    problema = e;
+  }finally{
+    cargando = false;
+    $("#progreso").className = "";
+    pintar();
+  }
+}
+
+/* ---------- filtros ---------- */
+const profesionales = () => [...new Set(reservas.map(r=>r.prof))].sort((a,b)=>a.localeCompare(b));
+const visibles = () => reservas.filter(r => !ocultas.has(r.prof) && salasOn.has(r.sala));
+
+function pintarFiltros(){
+  const ps = profesionales();
+  if (!ps.length){ $("#filtros").innerHTML = ""; return; }
+  const salas = SALAS.map(s=>
+    `<button class="f" data-sala="${s.id}" aria-pressed="${salasOn.has(s.id)}">
+       <span class="pt" style="background:${s.color}"></span>Sala ${s.nombre}</button>`).join("");
+  const profs = ps.map(p=>
+    `<button class="f" data-prof="${esc(p)}" aria-pressed="${!ocultas.has(p)}">
+       <span class="pt" style="background:${tonoDe(p)}"></span>${esc(p)}</button>`).join("");
+  $("#filtros").innerHTML = salas + profs;
+  document.querySelectorAll("[data-sala]").forEach(b=> b.onclick = ()=>{
+    const id = b.dataset.sala;
+    if (salasOn.has(id)){ if (salasOn.size > 1) salasOn.delete(id); } else salasOn.add(id);
+    pintar();
+  });
+  document.querySelectorAll("[data-prof]").forEach(b=> b.onclick = ()=>{
+    const p = b.dataset.prof;
+    if (ocultas.has(p)) ocultas.delete(p); else ocultas.add(p);
+    pintar();
+  });
+}
+
+/* ---------- huecos: se calculan y se muestran ---------- */
+function huecosDe(ocupadas, desde, hasta){
+  const orden = ocupadas.slice().sort((a,b)=> a.ini - b.ini);
+  const juntas = [];
+  orden.forEach(o=>{
+    const u = juntas[juntas.length-1];
+    if (u && o.ini <= u.fin) u.fin = Math.max(u.fin, o.fin);
+    else juntas.push({ ini:o.ini, fin:o.fin });
+  });
+  const h = []; let cursor = desde;
+  juntas.forEach(j=>{
+    if (j.ini > cursor) h.push({ ini:cursor, fin:Math.min(j.ini,hasta) });
+    cursor = Math.max(cursor, j.fin);
+  });
+  if (cursor < hasta) h.push({ ini:cursor, fin:hasta });
+  return h.filter(x => x.fin - x.ini >= 30);
+}
+
+/* ---------- vista semana ---------- */
+function vistaSemana(){
+  const lun = lunesDe(ancla);
+  const dias = []; for (let i=0;i<7;i++) dias.push(sumar(lun,i));
+  const rango = new Set(dias);
+  const sem = visibles().filter(r => rango.has(r.fecha));
+
+  let desde = 8*60, hasta = 20*60;
+  sem.forEach(r=>{
+    desde = Math.min(desde, minutos(r.hora));
+    hasta = Math.max(hasta, minutos(r.hora) + r.dur);
+  });
+  desde = Math.floor(desde/60)*60;
+  hasta = Math.ceil(hasta/60)*60;
+  const filas = (hasta - desde)/30;
+  const alto = f => `calc(var(--fila) * ${f})`;
+
+  let horas = "";
+  for (let m=desde; m<hasta; m+=60) horas += `<div class="num">${aHora(m)}</div>`;
+
+  const secciones = SALAS.filter(s=>salasOn.has(s.id)).map(sala=>{
+    const dela = sem.filter(r=>r.sala===sala.id);
+    let libreTotal = 0;
+    const cols = dias.map(d=>{
+      const delDia = dela.filter(r=>r.fecha===d)
+        .map(r=>({ ...r, ini:minutos(r.hora), fin:minutos(r.hora)+r.dur }));
+      const hs = huecosDe(delDia.map(x=>({ini:x.ini,fin:x.fin})), desde, hasta);
+      const finde = [0,6].indexOf(fecha(d).getDay()) >= 0;
+      if (!finde) libreTotal += hs.reduce((a,x)=>a+(x.fin-x.ini),0);
+
+      const bloques = delDia.map(r=>{
+        const top = (r.ini - desde)/30, h = Math.max(1, r.dur/30);
+        const compacto = r.dur < 45;
+        return `<div class="b res" style="top:${alto(top)};height:calc(${alto(h)} - 2px);background:${tonoDe(r.prof)}">
+          <span class="q">${esc(r.prof)}</span>${compacto?"":`<span class="h num">${esc(r.hora)}–${aHora(r.fin)}</span>`}</div>`;
+      }).join("");
+
+      // Los huecos se dibujan solo si ese día tiene algo agendado: un día
+      // entero vacío ya se lee como vacío, y marcarlo sería puro ruido.
+      const vacios = !delDia.length ? "" : hs.map(x=>{
+        const top = (x.ini - desde)/30, h = (x.fin - x.ini)/30, dur = x.fin - x.ini;
+        return `<div class="b hueco${dur<60?" chico":""}" style="top:${alto(top)};height:calc(${alto(h)} - 2px)">
+          ${dur>=60 ? `<span class="dur">${durTxt(dur)}</span><span>libre</span>` : `<span class="dur">${dur}′</span>`}</div>`;
+      }).join("");
+
+      return `<div class="dia${finde?" finde":""}${d===hoyISO()?" hoy":""}" style="height:${alto(filas)}">${vacios}${bloques}</div>`;
+    }).join("");
+
+    const cabDias = dias.map(d=>{
+      const dd = fecha(d), finde = [0,6].indexOf(dd.getDay()) >= 0;
+      return `<div class="d${finde?" finde":""}${d===hoyISO()?" hoy":""}">
+        <div class="sem">${DIAS_C[dd.getDay()]}</div><div class="fec num">${dd.getDate()}</div></div>`;
+    }).join("");
+
+    return `<section class="sala">
+      <div class="salaCab">
+        <h2><span class="pastilla" style="background:${sala.color}"></span>Sala ${sala.nombre}</h2>
+        <span class="dato"><b>${dela.length}</b> reserva${dela.length===1?"":"s"} · <b>${durTxt(libreTotal)}</b> libres de lunes a viernes</span>
+      </div>
+      <div class="marco"><div class="scroll"><div class="rejilla" style="--cols:7">
+        <div class="encDias"><div class="esq"></div>${cabDias}</div>
+        <div class="cuerpo"><div class="horas">${horas}</div>${cols}</div>
+      </div></div></div>
+    </section>`;
+  }).join("");
+
+  $("#periodo").innerHTML = rotuloSemana(dias) ;
+  return secciones;
+}
+
+function rotuloSemana(dias){
+  const a = fecha(dias[0]), b = fecha(dias[6]);
+  const mismoMes = a.getMonth() === b.getMonth();
+  const txt = mismoMes
+    ? `${a.getDate()} – ${b.getDate()} de ${MESES[b.getMonth()]}`
+    : `${a.getDate()} de ${MESES[a.getMonth()]} – ${b.getDate()} de ${MESES[b.getMonth()]}`;
+  const esta = lunesDe(hoyISO()) === dias[0];
+  return txt + (esta ? ` <em>esta semana</em>` : ` <em>${a.getFullYear()}</em>`);
+}
+
+/* ---------- vista mes ---------- */
+function vistaMes(){
+  const base = fecha(ancla);
+  const y = base.getFullYear(), m = base.getMonth();
+  const primero = new Date(y, m, 1);
+  const arranque = sumar(iso(primero), -((primero.getDay()+6)%7));
+  const celdas = [];
+  for (let i=0;i<42;i++) celdas.push(sumar(arranque,i));
+  if (celdas[35] && fecha(celdas[35]).getMonth() !== m) celdas.length = 35;
+
+  const vis = visibles();
+  const cabs = DIAS_C.slice(1).concat(DIAS_C[0]).map(d=>`<div>${d}</div>`).join("");
+
+  const cuerpo = celdas.map(d=>{
+    const dd = fecha(d);
+    const fuera = dd.getMonth() !== m;
+    const delDia = vis.filter(r=>r.fecha===d);
+    const tope = 4;
+    const evs = delDia.slice(0,tope).map(r=>
+      `<div class="ev" style="background:${tonoDe(r.prof)}" title="${esc(r.prof)} · sala ${salaDe(r.sala).nombre}">
+        <span class="hh">${esc(r.hora)}</span> ${esc(r.prof.split(" ")[0])}</div>`).join("");
+    const resto = delDia.length > tope ? `<div class="mas">+${delDia.length-tope} más</div>` : "";
+    let libre = "";
+    // Igual que en la semana: solo tiene sentido medir lo libre si ese día
+    // hay algo agendado. Un día sin nada ya se ve entero disponible.
+    if (!fuera && delDia.length && [0,6].indexOf(dd.getDay()) < 0){
+      const min = SALAS.filter(s=>salasOn.has(s.id)).reduce((a,s)=>{
+        const oc = delDia.filter(r=>r.sala===s.id).map(r=>({ini:minutos(r.hora),fin:minutos(r.hora)+r.dur}));
+        return a + huecosDe(oc, 8*60, 20*60).reduce((x,h)=>x+(h.fin-h.ini),0);
+      },0);
+      libre = `<div class="libre">${durTxt(min)} libres</div>`;
+    }
+    return `<div class="celda${fuera?" fuera":""}${d===hoyISO()?" hoy":""}" data-dia="${d}">
+      <div class="n num">${dd.getDate()}</div>
+      <div class="lista">${evs}${resto}</div>${libre}</div>`;
+  }).join("");
+
+  $("#periodo").innerHTML = MESES[m].charAt(0).toUpperCase()+MESES[m].slice(1)+" "+
+    `<em>${y}</em>`;
+  return `<div class="mes"><div class="mesCab">${cabs}</div><div class="mesGrid">${cuerpo}</div></div>
+    <div class="pie"><span>Tocá un día para abrir esa semana.</span></div>`;
+}
+
+/* ---------- pintado ---------- */
+function pintar(){
+  pintarFiltros();
+
+  if (problema){
+    $("#periodo").textContent = "Sin datos";
+    $("#vista").innerHTML = `<div class="aviso ${problema.auth?"":"malo"}">
+      <b>${problema.auth ? "Falta entrar con Google" : "No se pudo leer el horario"}</b>
+      ${esc(problema.message)}
+      <br><button class="btn" id="reint">${problema.auth ? "Entrar con Google" : "Reintentar"}</button>
+    </div>`;
+    $("#reint").onclick = ()=> cargar(true);
+    return;
+  }
+
+  if (!reservas.length && ultima){
+    $("#periodo").textContent = modo==="semana" ? "Semana sin reservas" : "Mes sin reservas";
+    $("#vista").innerHTML = `<div class="centro"><b>Todavía no hay reservas</b>
+      Cuando alguna psicóloga agende desde la app, las horas aparecen acá.</div>`;
+    return;
+  }
+  if (!ultima){ $("#vista").innerHTML = `<div class="centro">Cargando el horario…</div>`; return; }
+
+  $("#vista").innerHTML = (modo === "semana" ? vistaSemana() : vistaMes()) + pie();
+
+  if (modo === "mes"){
+    document.querySelectorAll("[data-dia]").forEach(c=> c.onclick = ()=>{
+      ancla = c.dataset.dia; modo = "semana"; marcarModo(); pintar();
+    });
+  }
+  const b = $("#refrescar"); if (b) b.onclick = ()=> cargar(true);
+  const p = $("#imprimir"); if (p) p.onclick = ()=> window.print();
+}
+
+function pie(){
+  const min = ultima ? Math.round((Date.now()-ultima)/60000) : null;
+  const cuando = min === null ? "sin actualizar" : (min < 1 ? "recién actualizado" : "actualizado hace "+min+" min");
+  return `<div class="pie">
+    <span>${reservas.length} reserva${reservas.length===1?"":"s"} en la planilla · ${cuando}</span>
+    <span><button id="imprimir">Imprimir</button> <button id="refrescar">Actualizar</button></span>
+  </div>`;
+}
+
+function marcarModo(){
+  $("#mSem").setAttribute("aria-pressed", String(modo==="semana"));
+  $("#mMes").setAttribute("aria-pressed", String(modo==="mes"));
+}
+
+/* ---------- navegación ---------- */
+$("#mSem").onclick = ()=>{ modo="semana"; marcarModo(); pintar(); };
+$("#mMes").onclick = ()=>{ modo="mes"; marcarModo(); pintar(); };
+$("#hoy").onclick  = ()=>{ ancla = hoyISO(); pintar(); };
+$("#ant").onclick  = ()=>{ ancla = saltar(-1); pintar(); };
+$("#sig").onclick  = ()=>{ ancla = saltar(1); pintar(); };
+
+function saltar(n){
+  if (modo === "semana") return sumar(ancla, 7*n);
+  const d = fecha(ancla);
+  return iso(new Date(d.getFullYear(), d.getMonth()+n, 1));
+}
+
+document.addEventListener("keydown", e=>{
+  if (e.target.tagName === "INPUT" || e.metaKey || e.ctrlKey) return;
+  if (e.key === "ArrowLeft"){ ancla = saltar(-1); pintar(); }
+  else if (e.key === "ArrowRight"){ ancla = saltar(1); pintar(); }
+  else if (e.key === "t" || e.key === "T"){ ancla = hoyISO(); pintar(); }
+});
+
+document.addEventListener("visibilitychange", ()=>{
+  if (!document.hidden && ultima && Date.now()-ultima > 120000) cargar(false);
+});
+window.addEventListener("online", ()=> cargar(false));
+
+/* ---------- arranque ---------- */
+marcarModo();
+cargar(false);
+setInterval(()=>{ if (!document.hidden) cargar(false); }, 300000);
+</script>
+</body>
+</html>

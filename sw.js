@@ -1,8 +1,9 @@
 /* Permite abrir la agenda sin conexión.
    Si cambiás index.html, subí también este archivo con un CACHE nuevo
    (por ejemplo "agenda-v3") para que el celular tome la versión nueva. */
-const CACHE = "agenda-v5";
-const BASE = [ "./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-180.png" ];
+const CACHE = "agenda-v8";
+const BASE = [ "./", "./index.html", "./tablero.html", "./manifest.json",
+               "./icon-180.png", "./icon-192.png", "./icon-512.png" ];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(BASE)).then(() => self.skipWaiting()));

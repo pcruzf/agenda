@@ -14,8 +14,9 @@ La opción más durable y gratuita es GitHub Pages:
 
 1. Creá una cuenta en <https://github.com> si no tenés.
 2. Creá un repositorio nuevo, público, llamado por ejemplo `agenda`.
-3. Subí los cinco archivos: `index.html`, `sw.js`, `manifest.json`,
-   `icon-192.png`, `icon-512.png` (botón *Add file → Upload files*).
+3. Subí todos los archivos: `index.html`, `tablero.html`, `sw.js`,
+   `manifest.json`, `icon-180.png`, `icon-192.png`, `icon-512.png`
+   (botón *Add file → Upload files*).
 4. Entrá en *Settings → Pages*. En *Source* elegí `Deploy from a branch`,
    rama `main`, carpeta `/ (root)`. Guardá.
 5. A los dos o tres minutos te queda una dirección así:
@@ -50,7 +51,13 @@ Esto autoriza a *tu* app a guardar un archivo en *tu* Drive. No hay costo.
 
 1. Entrá a <https://console.cloud.google.com/> con tu cuenta de Google.
 2. Arriba a la izquierda, creá un proyecto nuevo. Nombre: `Agenda consultorio`.
-3. En el buscador escribí **Google Drive API**, entrá y tocá **Habilitar**.
+3. Habilitá **las dos** APIs. En el buscador de arriba escribí cada una,
+   entrá y tocá **Habilitar**:
+   - **Google Drive API** (para el archivo privado de pacientes)
+   - **Google Sheets API** (para la planilla compartida de reservas)
+
+   Si te salteás la segunda, la app va a decir *Falta habilitar la API de
+   Google Sheets*: volvé acá y habilitala.
 4. Andá a **APIs y servicios → Pantalla de consentimiento de OAuth**:
    - Tipo de usuario: **Externo**. Crear.
    - Nombre de la app: `Agenda consultorio`. Correo de asistencia: el tuyo.
@@ -144,8 +151,8 @@ eso la planilla compartida se puede abrir delante de cualquiera.
 
 1. Creá una planilla nueva en <https://sheets.google.com>. Llamala
    `Reservas consultorio`.
-2. Renombrá la primera pestaña como **Reservas** (exactamente así, con mayúscula).
-   No hace falta escribir encabezados: los crea la app sola.
+2. No hace falta preparar nada adentro: la app crea sola la pestaña
+   **Reservas** y sus encabezados la primera vez que sincroniza.
 3. Compartila con todas, con permiso de **Editor**.
 4. Copiá el ID de la planilla: en la dirección
    `docs.google.com/spreadsheets/d/`**`ESTO_DE_ACA`**`/edit`
@@ -156,6 +163,25 @@ eso la planilla compartida se puede abrir delante de cualquiera.
 Todas usan **el mismo ID de cliente** y **la misma planilla**, pero **cada una
 con su cuenta de Google**. Cada una tendrá su propio archivo privado de
 pacientes en su propio Drive.
+
+### Fijar los códigos en el archivo (muy recomendado)
+
+Antes de subir `index.html` a GitHub, abrilo con el Bloc de notas y completá
+el bloque que está arriba de todo:
+
+```
+const CONSULTORIO = {
+  clienteId: "502751961059-....apps.googleusercontent.com",
+  hojaId:    "1gs_xYxJKDtr...."
+};
+```
+
+Con eso, ninguna psicóloga tiene que pegar códigos: la app los toma sola.
+**Pasar el ID de cliente por WhatsApp es la causa más común del
+`Error 401: invalid_client`**, porque el texto llega cortado.
+
+Si más adelante cambiás algún código acá, se corrige en todos los
+dispositivos con solo recargar.
 
 ### Configuración en cada teléfono o PC
 
@@ -176,15 +202,55 @@ esa hora.
 Si intentás reservar una sala que ya está tomada —por vos o por una colega—
 la app te avisa antes de guardar y te deja decidir.
 
+### El tablero: ver la semana y el mes completos
+
+`tablero.html` es una página aparte, pensada para planificar. Se abre desde
+la app (**Ajustes → Ver el horario de todas**) o directo:
+
+```
+https://TUUSUARIO.github.io/agenda/tablero.html
+```
+
+Conviene que cada una la guarde en favoritos, o la agregue a la pantalla de
+inicio como un acceso más.
+
+Qué muestra:
+
+- **Semana**: las dos salas, una debajo de la otra, con los siete días. Cada
+  reserva es un bloque del color de la psicóloga. **Los huecos libres se
+  dibujan con su duración** ("2 h libre"), así se ve de un vistazo dónde entra
+  alguien. Los huecos solo aparecen en días que ya tienen algo agendado.
+- **Mes**: el calendario entero, con las reservas de cada día y cuánto queda
+  libre. Tocando un día se abre esa semana.
+- **Filtros**: se puede apagar una sala o dejar visible solo a algunas
+  psicólogas, para ver la agenda de una sola persona.
+- **Imprimir**: sale apaisado y con los colores, para colgar en la pared.
+- Flechas ← → para moverse, tecla **T** para volver a hoy.
+
+Se actualiza sola cada 5 minutos y al volver a la pestaña.
+
+**Antes de subirlo**, completá el bloque `CONSULTORIO` de `tablero.html` con
+el mismo ID de cliente y el mismo ID de planilla que pusiste en `index.html`.
+
+#### Si querés que se abra sin pedir cuenta de Google
+
+Se puede, pero pensalo: la planilla no tiene datos de pacientes, pero sí los
+nombres de las psicólogas y sus horarios de trabajo, y quedaría accesible para
+cualquiera que tenga el enlace.
+
+Si aun así conviene: en la planilla, *Archivo → Compartir → Publicar en la
+web*, elegí la pestaña `Reservas` y el formato **CSV**. Copiá la dirección que
+te da y pegala en `csvPublicado`, dentro del bloque `CONSULTORIO` de
+`tablero.html`. Con eso el tablero deja de pedir login.
+
 ### Ver las reservas fuera de la app
 
 Abrí la planilla desde el botón **Abrir la planilla** en Ajustes, o directo
 desde Drive. Cada fila es una reserva: fecha, hora, hora de fin, minutos,
 sala, profesional y estado.
 
-Para planificar cómodo, conviene crear una vista filtrada por fecha, o usar
-*Datos → Crear un filtro* y ordenar por fecha y hora. También podés hacer
-una tabla dinámica en otra pestaña, sin tocar la pestaña `Reservas`.
+La planilla es el registro crudo. Para planificar conviene usar el tablero,
+que lee estos mismos datos y los muestra por semana y por mes.
 
 **No edites ni borres filas de la pestaña `Reservas` a mano.** La app la
 reescribe: los cambios manuales se pierden y podés desordenar reservas de
@@ -227,11 +293,28 @@ personal, conviene consultarlo con quien corresponda antes de seguir.
 | `access_denied` | Falta agregar tu correo en *Usuarios de prueba*. |
 | Dice *sin sincronizar* y no avanza | Probá **Sincronizar ahora** en Ajustes; abre la ventana de permisos. |
 | El celular muestra la versión vieja | Cambiá `agenda-v2` por `agenda-v3` en `sw.js`, volvé a subirlo y recargá. |
+| *Falta habilitar la API de Google Sheets* | Andá a Google Cloud → APIs y servicios → Habilitar API, buscá **Google Sheets API** y habilitala. Después tocá *Reintentar la planilla*. |
+| *Falta el permiso de planillas* | La app pide un permiso nuevo que antes no existía. En Ajustes tocá *Guardar y conectar* y aceptá **todas** las casillas que muestra Google. |
+| *Sin permiso sobre la planilla* | Pedí que te la compartan como **Editor**, no como lector. |
+| *No se encontró la planilla* | El ID está mal. Podés pegar la dirección entera de la planilla: la app recorta sola el ID. |
+| *Tocá para conectar con Google* | Normal: el navegador no deja abrir la ventana de Google sin un toque. Tocá el estado en el encabezado o *Sincronizar ahora*. |
+| **Error 401: invalid_client** | El ID de cliente está mal o incompleto (típico si se pasó por mensaje). Fijalo en el bloque `CONSULTORIO` del archivo, o revisá en Ajustes → Diagnóstico que diga *formato correcto*. |
+| **Error 401: deleted_client** | Se borró la credencial en Google Cloud. Creá una nueva y actualizá el bloque `CONSULTORIO`. |
+| **Acceso bloqueado / access_denied** | Falta el correo de esa psicóloga en *Usuarios de prueba* del proyecto de Cloud. Agregalo y que reintente. |
+| **Error 403: disallowed_useragent** | Abrió el enlace dentro de WhatsApp o Instagram. Google bloquea esos navegadores: hay que abrirlo en Chrome (Android) o Safari (iPhone) e instalar la app desde ahí. |
+| **origin_mismatch** | La dirección desde la que se abre no está en *Orígenes autorizados de JavaScript*. Comparala con el campo *Origen* del Diagnóstico: tienen que ser idénticas. |
 | No aparece *Instalar aplicación* | Solo funciona sobre `https://`, no con el archivo local. En iPhone usá Safari, no Chrome. |
 | iPhone: la ventana de Google no abre | Safari bloquea las emergentes que no salen de un toque. Tocá *falta reconectar* en el encabezado, o *Sincronizar ahora* en Ajustes. |
 | iPhone: se perdieron los datos | Safari borra el almacenamiento tras siete días sin abrir el sitio. Agregala a la pantalla de inicio y configurá Drive. |
 
 ---
+
+## Cuando alguien reporta un problema
+
+Pedile que vaya a **Ajustes → Diagnóstico** y toque *Copiar diagnóstico*, y
+que te lo mande. Ahí vas a ver el origen exacto, si el ID de cliente está bien
+formado, si abrió la app en un navegador embebido y cuál fue el último error.
+Con eso se resuelve casi todo sin tener el teléfono a mano.
 
 ## Actualizar la app más adelante
 

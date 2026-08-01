@@ -292,6 +292,11 @@ nav button[aria-current="page"]{color:var(--pine);font-weight:600}
 }
 .chipSala.s-naranja{background:#FBF0E2;color:#A75A10}
 .chipSala.s-azul{background:#E7EEF7;color:#24507F}
+.diag{
+  background:#F4F7F5;border:1px solid var(--line);border-radius:10px;padding:11px 12px;
+  font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11.5px;line-height:1.55;
+  white-space:pre-wrap;word-break:break-word;color:var(--ink-soft);margin-bottom:10px;
+}
 
 /* ---------- hoja modal ---------- */
 .velo{
@@ -392,6 +397,17 @@ input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{
 <script>
 "use strict";
 
+/* ==========================================================================
+   CONFIGURACIÓN DEL CONSULTORIO — completar una sola vez, antes de subir
+   el archivo a GitHub. Así ninguna psicóloga tiene que pegar códigos a mano
+   (pegarlos por mensaje es la causa más común de "Error 401: invalid_client",
+   porque el texto llega cortado).
+   ========================================================================== */
+const CONSULTORIO = {
+  clienteId: "",   // Ej: "502751961059-7f8n....apps.googleusercontent.com"
+  hojaId:    ""    // Ej: "1gs_xYxJKDtrOfpZ6r1eUWm-9GKdJNP6n_gOiEZrlVB8"
+};
+
 /* ============ almacenamiento ============ */
 const CLAVE = "agenda_consultorio_v1";
 const Store = {
@@ -444,6 +460,28 @@ const SALAS = [
   { id:"azul",    nombre:"Azul",    color:"#2A6099", suave:"#E7EEF7" }
 ];
 const salaDe = id => SALAS.find(s=>s.id===id) || SALAS[0];
+
+/* Detecta los pegados incompletos, que son la causa habitual del
+   "Error 401: invalid_client" de Google. */
+function revisarClienteId(v){
+  v = String(v||"").trim();
+  if (!v) return "Falta el ID de cliente.";
+  if (/\s/.test(v)) return "El ID tiene espacios o saltos de línea: se pegó mal.";
+  if (!/\.apps\.googleusercontent\.com$/.test(v))
+    return "El ID tiene que terminar en .apps.googleusercontent.com — parece que quedó cortado.";
+  if (!/^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/i.test(v))
+    return "El ID no tiene el formato esperado (números, guion, letras y el final .apps.googleusercontent.com).";
+  if (v.length < 50) return "El ID quedó demasiado corto: probablemente se cortó al copiarlo.";
+  return "";
+}
+
+function revisarHojaId(v){
+  v = String(v||"").trim();
+  if (!v) return "";
+  if (/\s/.test(v)) return "El ID de la planilla tiene espacios: se pegó mal.";
+  if (v.length < 30) return "El ID de la planilla parece incompleto.";
+  return "";
+}
 
 async function persistir(){ await Store.guardar(db); Sync.programar(); Salas.programar(); }
 
@@ -1594,6 +1632,33 @@ async function bajar(texto, nombre, tipo){
 }
 
 /* ---- ajustes ---- */
+function diagnostico(){
+  const id = db.config.driveId || "";
+  const corto = id ? (id.slice(0,14) + "…" + id.slice(-28) + "  (" + id.length + " caracteres)") : "(vacío)";
+  const mal = revisarClienteId(id);
+  const inst = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) ||
+               navigator.standalone === true;
+  const ua = navigator.userAgent || "";
+  const dentroDeApp = /FBAN|FBAV|Instagram|Line\/|WhatsApp|; wv\)/.test(ua);
+  const L = [];
+  L.push("— Diagnóstico de la agenda —");
+  L.push("Origen: " + (location.origin || (location.protocol + "//" + location.host)));
+  L.push("Dirección: " + location.href.split("?")[0]);
+  L.push("Instalada como app: " + (inst ? "sí" : "no (pestaña del navegador)"));
+  L.push("Navegador embebido: " + (dentroDeApp ? "SÍ — abrila en Chrome o Safari, Google bloquea estos" : "no"));
+  L.push("ID de cliente: " + corto);
+  L.push("ID fijado en el archivo: " + (CONSULTORIO.clienteId ? "sí" : "no"));
+  L.push("Revisión del ID: " + (mal || "formato correcto"));
+  L.push("ID de planilla: " + (db.config.hojaId ? db.config.hojaId.slice(0,10)+"… ("+db.config.hojaId.length+")" : "(vacío)"));
+  L.push("Nombre profesional: " + (db.config.profNombre || "(sin cargar)"));
+  L.push("Librería de Google cargada: " + (window.google && google.accounts ? "sí" : "NO"));
+  L.push("Drive: " + Sync.texto() + (Sync.detalle ? " · " + Sync.detalle : ""));
+  L.push("Planilla: " + (Salas.detalle || (Salas.ultima ? "al día" : "sin sincronizar")));
+  L.push("Datos: " + db.pacientes.length + " pacientes, " + db.consultas.length + " consultas");
+  L.push("Navegador: " + ua.slice(0,110));
+  return L.join("\n");
+}
+
 function vistaAjustes(){
   const opsPaso = [15,20,30,60].map(m=>`<option value="${m}" ${(parseInt(db.config.paso,10)||30)===m?"selected":""}>${durTxt(m)}</option>`).join("");
   const opsDur = [15,20,30,45,60,90,120].map(m=>`<option value="${m}" ${(parseInt(db.config.duracion,10)||60)===m?"selected":""}>${durTxt(m)}</option>`).join("");
@@ -1640,7 +1705,8 @@ function vistaAjustes(){
       <label for="aSala">Sala que usás más seguido</label>
       <select id="aSala">${SALAS.map(x=>`<option value="${x.id}" ${(db.config.salaDef||"naranja")===x.id?"selected":""}>${x.nombre}</option>`).join("")}</select>
       <button class="btn" id="aEqG">Guardar</button>
-      ${db.config.hojaId?`<a class="btn sec" href="https://docs.google.com/spreadsheets/d/${encodeURIComponent(db.config.hojaId)}/edit" target="_blank" rel="noopener">Abrir la planilla</a>`:""}
+      <a class="btn sec" href="tablero.html" target="_blank" rel="noopener">Ver el horario de todas</a>
+      ${db.config.hojaId?`<a class="btn sec" href="https://docs.google.com/spreadsheets/d/${encodeURIComponent(db.config.hojaId)}/edit" target="_blank" rel="noopener">Abrir la planilla en Google</a>`:""}
       ${Salas.detalle
         ? `<div class="aviso" style="margin-top:10px"><b>La planilla no sincronizó.</b><br>${esc(Salas.detalle)}</div>
            <button class="btn sec" id="aSalasR">Reintentar la planilla</button>`
@@ -1659,12 +1725,18 @@ function vistaAjustes(){
       ${db.config.driveId?`<button class="btn sec" id="aDrvOff">Desconectar Drive</button>`:""}
     </div>
 
-    <h2 class="titulo" style="margin-top:22px">Copia de seguridad</h2>
-    <div class="sub">Los datos viven solamente en este teléfono. Guardá una copia cada tanto.</div>
+    <h2 class="titulo" style="margin-top:22px">Copia de seguridad</h2>    <div class="sub">Los datos viven solamente en este teléfono. Guardá una copia cada tanto.</div>
     <button class="btn sec" id="aExp">Exportar todo a un archivo</button>
     <button class="btn sec" id="aImp">Restaurar desde un archivo</button>
     <input type="file" id="aFile" accept="application/json,.json" hidden>
     <button class="btn peligro" id="aBorrar" style="margin-top:22px">Borrar todos los datos</button>
+    <h2 class="titulo" style="margin-top:22px">Diagnóstico</h2>
+    <div class="sub">Si algo falla, mandá esto a quien administra la app.</div>
+    <div class="hoja">
+      <div class="diag">${esc(diagnostico())}</div>
+      <button class="btn sec" id="aDiag">Copiar diagnóstico</button>
+    </div>
+
     <div class="sub" style="margin-top:18px;text-align:center">${db.pacientes.length} pacientes · ${db.consultas.length} consultas</div>`;
 
   $("#aGuardarH").onclick = async ()=>{
@@ -1693,6 +1765,8 @@ function vistaAjustes(){
   $("#aEqG").onclick = async ()=>{
     db.config.profNombre = $("#aProf").value.trim();
     db.config.hojaId = $("#aHoja").value.trim().replace(/^.*\/d\/([^/]+).*$/, "$1");
+    const malH = revisarHojaId(db.config.hojaId);
+    if (malH){ toast(malH); }
     db.config.salaDef = $("#aSala").value || "naranja";
     selloConfig();
     await persistir();
@@ -1707,6 +1781,8 @@ function vistaAjustes(){
   };
   $("#aDrvG").onclick = ()=>{
     const id = $("#aDrv").value.trim();
+    const mal = id ? revisarClienteId(id) : "";
+    if (mal && !confirm(mal + "\n\n¿Guardar igual?")) return;
     db.config.driveId = id;
     selloConfig();
     Sync.token = null; Sync.fileId = null; Sync.cliente = null; Sync.ultima = 0;
@@ -1727,6 +1803,10 @@ function vistaAjustes(){
     Sync.token = null; Sync.fileId = null; Sync.cliente = null; Sync.ultima = 0;
     Sync.marcar("off");
     await Store.guardar(db); vistaAjustes(); toast("Drive desconectado");
+  };
+  $("#aDiag").onclick = async ()=>{
+    try{ await navigator.clipboard.writeText(diagnostico()); toast("Diagnóstico copiado"); }
+    catch(e){ prompt("Copiá esto:", diagnostico()); }
   };
   $("#aExp").onclick = ()=> bajar(JSON.stringify(db,null,2), "respaldo-consultorio-"+hoyISO()+".json", "application/json");
   $("#aImp").onclick = ()=> $("#aFile").click();
@@ -1775,6 +1855,14 @@ function vistaAjustes(){
     configMod: (guardado && guardado.configMod) || 0,
     borrados: (guardado && guardado.borrados) || {}
   };
+  // Los códigos del bloque CONSULTORIO mandan sobre lo guardado: así, si se
+  // corrigen en el archivo, se corrigen en todos los dispositivos al recargar.
+  if (CONSULTORIO.clienteId && db.config.driveId !== CONSULTORIO.clienteId){
+    db.config.driveId = CONSULTORIO.clienteId; selloConfig();
+  }
+  if (CONSULTORIO.hojaId && db.config.hojaId !== CONSULTORIO.hojaId){
+    db.config.hojaId = CONSULTORIO.hojaId; selloConfig();
+  }
   if (!db.config.profId){
     db.config.profId = nuevoId() + nuevoId();
     selloConfig();
