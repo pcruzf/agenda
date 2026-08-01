@@ -273,6 +273,33 @@ que lee estos mismos datos y los muestra por semana y por mes.
 reescribe: los cambios manuales se pierden y podés desordenar reservas de
 otras. Si hay que corregir algo, se hace desde la app.
 
+### Avisar el resumen del mes a cada paciente
+
+Al terminar el mes, en **Mes → Enviar resúmenes a los pacientes** aparece la
+lista de quienes tuvieron consultas cobrables, con la cantidad y el total.
+
+Tocando cada uno se ve el mensaje ya armado y se manda por WhatsApp, igual que
+los recordatorios. Al enviarlo queda marcado como *enviado*, así no se manda
+dos veces ni se saltea a nadie. La marca se sincroniza entre tus dispositivos.
+También se puede marcar o desmarcar a mano.
+
+- Si el mes tiene consultas sin marcar, avisa antes: el total estaría incompleto.
+- Si alguien no tiene teléfono cargado, ofrece copiar el mensaje.
+- Desde la tabla del mes también se puede tocar directamente a un paciente.
+
+El texto se edita en **Ajustes → Mensaje de resumen de fin de mes**. Admite
+`{nombre}`, `{nombreCompleto}`, `{mes}`, `{anio}`, `{cantidad}`, `{asistidas}`,
+`{faltas}`, `{detalle}` (las fechas), `{arancel}` y `{total}`.
+
+Por defecto dice algo así:
+
+> Hola Ana, te paso el resumen de agosto: 3 consultas (03/08, 10/08, 17/08).
+> Total: $ 4.500. Cualquier duda avisame. ¡Gracias!
+
+Nota: si tenés activado el cobro de faltas, `{cantidad}` y `{detalle}` incluyen
+las faltas cobradas, porque es lo que se está facturando. Si preferís
+distinguirlas, usá `{asistidas}` y `{faltas}` por separado en la plantilla.
+
 ### Dar de baja varias consultas de una vez
 
 Cuando alguien suspende la terapia por vacaciones o deja de venir, no hace

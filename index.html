@@ -317,6 +317,31 @@ nav button[aria-current="page"]{color:var(--pine);font-weight:600}
 .linea .hh{font-weight:600}
 .linea .sl{margin-left:auto;font-size:11px;color:var(--ink-soft)}
 .btn.apagado{opacity:.45;pointer-events:none}
+tr.clicable{cursor:pointer}
+tr.clicable:active td{background:#F4F7F5}
+.fichaLinea{
+  display:flex;align-items:center;gap:11px;width:100%;background:none;border:0;
+  border-bottom:1px solid var(--line);padding:11px 12px;font-family:inherit;
+  text-align:left;cursor:pointer;color:var(--ink);
+}
+.fichaLinea:last-child{border-bottom:0}
+.fichaLinea:active{background:#F4F7F5}
+.fichaLinea .ini{
+  flex:0 0 34px;height:34px;border-radius:50%;background:#E4EBE7;color:var(--pine);
+  display:grid;place-items:center;font-family:var(--serif);font-size:13px;font-weight:600;
+}
+.fichaLinea.hecho .ini{background:var(--ok-bg);color:var(--ok)}
+.fichaLinea .txt{flex:1;min-width:0}
+.fichaLinea .txt b{display:block;font-size:15px;font-weight:600}
+.fichaLinea .txt span{font-size:12px;color:var(--ink-soft)}
+.fichaLinea .der{text-align:right;font-size:11px;color:var(--ink-soft);line-height:1.3}
+.fichaLinea .der b{display:block;font-size:15px;color:var(--pine);font-weight:600}
+.fichaLinea.hecho .der span{color:var(--ok);font-weight:600}
+.previo{
+  background:var(--surface);border:1px solid var(--line);border-radius:10px;
+  padding:12px 13px;font-size:14px;line-height:1.55;white-space:pre-wrap;
+  word-break:break-word;margin-top:5px;
+}
 
 /* ---------- hoja modal ---------- */
 .velo{
@@ -455,7 +480,7 @@ const Store = {
   }
 };
 
-let db = { pacientes:[], consultas:[], config:{}, borrados:{}, configMod:0 };
+let db = { pacientes:[], consultas:[], config:{}, borrados:{}, configMod:0, avisos:{} };
 
 /* Reservas de las demás psicólogas: se leen de la planilla compartida y son
    de solo lectura. Nunca traen datos de pacientes. */
@@ -480,7 +505,8 @@ const CONFIG_DEF = {
   profNombre: "",
   profId: "",
   salaDef: "naranja",
-  plantillaCambio: "Hola {nombre}, cambiamos tu consulta para el {dia} {fecha} a las {hora}. Cualquier cosa avisame. ¡Gracias!"
+  plantillaCambio: "Hola {nombre}, cambiamos tu consulta para el {dia} {fecha} a las {hora}. Cualquier cosa avisame. ¡Gracias!",
+  plantillaCierre: "Hola {nombre}, te paso el resumen de {mes}: {cantidad} consultas ({detalle}). Total: {total}. Cualquier duda avisame. ¡Gracias!"
 };
 
 const SALAS = [
@@ -538,12 +564,17 @@ function fundir(local, remoto){
   if (!remoto) return local;
   const borrados = mezclarBorrados(local.borrados, remoto.borrados);
   const localNueva = (local.configMod||0) >= (remoto.configMod||0);
+  const avisos = Object.assign({}, local.avisos||{});
+  Object.keys(remoto.avisos||{}).forEach(k=>{
+    if (!avisos[k] || remoto.avisos[k] > avisos[k]) avisos[k] = remoto.avisos[k];
+  });
   return {
     pacientes: mezclarLista(local.pacientes, remoto.pacientes, borrados),
     consultas: mezclarLista(local.consultas, remoto.consultas, borrados),
     config: Object.assign({}, CONFIG_DEF, localNueva ? remoto.config : local.config, localNueva ? local.config : remoto.config),
     configMod: Math.max(local.configMod||0, remoto.configMod||0),
-    borrados: borrados
+    borrados: borrados,
+    avisos: avisos
   };
 }
 
@@ -1636,6 +1667,123 @@ function variasConsultas(id){
 
 function sumar90(d){ return sumarDias(d, 90); }
 
+/* ---- resumen de fin de mes para el paciente ---- */
+function resumenMes(pacienteId, mes){
+  const cs = ordenar(db.consultas.filter(c =>
+    c.pacienteId === pacienteId && String(c.fecha).slice(0,7) === mes));
+  const cobradas = cs.filter(seCobra);
+  return {
+    asistidas: cs.filter(c=>c.estado==="asistio").length,
+    faltas: cs.filter(c=>c.estado==="falto").length,
+    faltasCobradas: db.config.cobrarFaltas ? cs.filter(c=>c.estado==="falto").length : 0,
+    cantidad: cobradas.length,
+    total: cobradas.reduce((a,c)=>a+importeDe(c), 0),
+    pendientes: cs.filter(c=>c.estado==="pendiente").length,
+    sinPrecio: cobradas.filter(c=>!importeDe(c)).length,
+    fechas: cobradas.map(c=>corta(c.fecha))
+  };
+}
+
+const claveAviso = (pacienteId, mes) => mes + ":" + pacienteId;
+const avisado = (pacienteId, mes) => !!(db.avisos && db.avisos[claveAviso(pacienteId, mes)]);
+
+function mensajeCierre(pacienteId, mes){
+  const p = paciente(pacienteId);
+  const r = resumenMes(pacienteId, mes);
+  const nom = MESES[+mes.slice(5,7)-1];
+  return String(db.config.plantillaCierre || CONFIG_DEF.plantillaCierre)
+    .replace(/\{nombre\}/g, (p?p.nombre:"").split(" ")[0] || "")
+    .replace(/\{nombreCompleto\}/g, p?p.nombre:"")
+    .replace(/\{mes\}/g, nom)
+    .replace(/\{anio\}/g, mes.slice(0,4))
+    .replace(/\{cantidad\}/g, r.cantidad)
+    .replace(/\{asistidas\}/g, r.asistidas)
+    .replace(/\{faltas\}/g, r.faltasCobradas)
+    .replace(/\{detalle\}/g, r.fechas.join(", "))
+    .replace(/\{total\}/g, plata(r.total))
+    .replace(/\{arancel\}/g, plata(p && p.arancel ? p.arancel : 0));
+}
+
+function pantallaCierres(mes){
+  const filas = datosMes(mes).filter(r => r.importe || r.asistio);
+  const nom = MESES[+mes.slice(5,7)-1] + " de " + mes.slice(0,4);
+  if (!filas.length){
+    abrir(`<h3>Resúmenes de ${nom}</h3>
+      <div class="ocupadas">No hay consultas cobrables en ese mes.</div>
+      <button class="btn sec" id="cCerrar">Cerrar</button>`);
+    $("#cCerrar").onclick = cerrar;
+    return;
+  }
+  const listos = filas.filter(r=>avisado(r.id, mes)).length;
+  const lista = filas.map(r=>{
+    const p = paciente(r.id);
+    const ok = avisado(r.id, mes);
+    return `<button class="fichaLinea${ok?" hecho":""}" data-cierre="${r.id}">
+      <span class="ini">${esc(iniciales(r.nombre))}</span>
+      <span class="txt"><b>${esc(r.nombre)}</b>
+        <span>${r.asistio} consulta${r.asistio===1?"":"s"}${!p||!p.telefono?" · sin teléfono":""}</span></span>
+      <span class="der"><b class="num plata">${plata(r.importe)}</b>
+        <span>${ok?"enviado":"pendiente"}</span></span>
+    </button>`;
+  }).join("");
+
+  abrir(`<h3>Resúmenes de ${nom}</h3>
+    <div class="sub">${listos} de ${filas.length} enviados. Tocá cada paciente para ver y mandar el mensaje.</div>
+    <div class="listaSel">${lista}</div>
+    <button class="btn sec" id="cCerrar">Cerrar</button>`);
+  $("#cCerrar").onclick = cerrar;
+  document.querySelectorAll("[data-cierre]").forEach(b=>
+    b.addEventListener("click", ()=> avisoCierre(b.dataset.cierre, mes, true)));
+}
+
+function avisoCierre(pacienteId, mes, desdeLista){
+  const p = paciente(pacienteId);
+  if (!p) return;
+  const r = resumenMes(pacienteId, mes);
+  const nom = MESES[+mes.slice(5,7)-1];
+  const texto = mensajeCierre(pacienteId, mes);
+  const tel = p.telefono ? telWhatsApp(p.telefono) : "";
+  const link = tel ? "https://wa.me/"+tel+"?text="+encodeURIComponent(texto) : "";
+  const ok = avisado(pacienteId, mes);
+
+  const alertas = [];
+  if (r.pendientes) alertas.push(r.pendientes+" consulta"+(r.pendientes===1?"":"s")+" de ese mes sigue"+(r.pendientes===1?"":"n")+" sin marcar, así que el total puede estar incompleto.");
+  if (r.sinPrecio) alertas.push(r.sinPrecio+" consulta"+(r.sinPrecio===1?"":"s")+" sin importe cargado.");
+
+  abrir(`<h3>Resumen de ${esc(nom)}</h3>
+    <div class="sub">${esc(p.nombre)} · ${r.asistidas} asistida${r.asistidas===1?"":"s"}${
+      r.faltasCobradas?" · "+r.faltasCobradas+" falta"+(r.faltasCobradas===1?"":"s")+" cobrada"+(r.faltasCobradas===1?"":"s"):""} · ${plata(r.total)}</div>
+    ${alertas.length?`<div class="aviso">${alertas.map(esc).join("<br>")}</div>`:""}
+    <label>Mensaje</label>
+    <div class="previo">${esc(texto)}</div>
+    ${link
+      ? `<a class="btn" href="${link}" target="_blank" rel="noopener" id="cWA">Enviar por WhatsApp</a>`
+      : `<div class="ocupadas">Este paciente no tiene teléfono cargado. Podés copiar el mensaje y mandarlo por otra vía.</div>`}
+    <button class="btn sec" id="cCopiar">Copiar el mensaje</button>
+    <button class="btn sec" id="cMarcar">${ok?"Marcar como no enviado":"Marcar como enviado"}</button>
+    <button class="btn sec" id="cVolver">${desdeLista?"Volver a la lista":"Cerrar"}</button>`);
+
+  async function marcar(v){
+    if (v) db.avisos[claveAviso(pacienteId, mes)] = Date.now();
+    else delete db.avisos[claveAviso(pacienteId, mes)];
+    await persistir();
+  }
+  if (link) $("#cWA").onclick = async ()=>{
+    await marcar(true);
+    setTimeout(()=> desdeLista ? pantallaCierres(mes) : cerrar(), 700);
+  };
+  $("#cCopiar").onclick = async ()=>{
+    try{ await navigator.clipboard.writeText(texto); toast("Mensaje copiado"); }
+    catch(e){ prompt("Copiá el mensaje:", texto); }
+  };
+  $("#cMarcar").onclick = async ()=>{
+    await marcar(!ok);
+    toast(ok ? "Marcado como no enviado" : "Marcado como enviado");
+    desdeLista ? pantallaCierres(mes) : avisoCierre(pacienteId, mes, false);
+  };
+  $("#cVolver").onclick = ()=> desdeLista ? pantallaCierres(mes) : cerrar();
+}
+
 /* ---- cierre de mes ---- */
 function datosMes(mes){
   const cs = db.consultas.filter(c=>String(c.fecha).slice(0,7)===mes);
@@ -1675,8 +1823,8 @@ function vistaMes(){
 
   const tabla = filas.length ? `<table>
       <thead><tr><th>Paciente</th><th>Asist.</th><th>Faltó</th><th>A facturar</th></tr></thead>
-      <tbody>${filas.map(r=>`<tr>
-        <td>${esc(r.nombre)}</td>
+      <tbody>${filas.map(r=>`<tr data-cli="${r.id}" class="clicable">
+        <td>${esc(r.nombre)}${avisado(r.id, mesSel)?' <span class="marca">avisado</span>':""}</td>
         <td class="num">${r.asistio}</td>
         <td class="num">${r.falto||"–"}</td>
         <td class="num plata">${r.importe ? plata(r.importe) : "–"}</td></tr>`).join("")}</tbody>
@@ -1711,13 +1859,17 @@ function vistaMes(){
     <div class="hoja"><h3>Consultas por paciente</h3>
       <div class="periodo">${nom} · ${cobra ? "se cobran las faltas" : "las faltas no se cobran"}</div>
       ${tabla}</div>
-    <button class="btn" id="mCopia">Copiar el resumen</button>
+    <button class="btn" id="mAvisos">Enviar resúmenes a los pacientes</button>
+    <button class="btn sec" id="mCopia">Copiar el resumen para mí</button>
     <button class="btn sec" id="mCsv">Descargar planilla (CSV)</button>`;
 
   $("#mAnt").onclick = ()=>{ mesSel = mesSumar(mesSel,-1); vistaMes(); };
   $("#mSig").onclick = ()=>{ mesSel = mesSumar(mesSel, 1); vistaMes(); };
   $("#mMes").onchange = e=>{ mesSel = mesSel.slice(0,4)+"-"+e.target.value; vistaMes(); };
   $("#mAnio").onchange = e=>{ mesSel = e.target.value+"-"+mesSel.slice(5,7); vistaMes(); };
+  if ($("#mAvisos")) $("#mAvisos").onclick = ()=> pantallaCierres(mesSel);
+  document.querySelectorAll("[data-cli]").forEach(t=>
+    t.addEventListener("click", ()=> avisoCierre(t.dataset.cli, mesSel, false)));
   $("#mCopia").onclick = async ()=>{
     const txt = "Consultas de "+nom+"\n\n" + (conAlgo.length
       ? conAlgo.map(r=>{
@@ -1823,7 +1975,10 @@ function vistaAjustes(){
       <textarea id="aPla" style="min-height:110px">${esc(db.config.plantilla)}</textarea>
       <label for="aPlaC">Mensaje de cambio de cita</label>
       <textarea id="aPlaC" style="min-height:110px">${esc(db.config.plantillaCambio)}</textarea>
-      <div class="sub" style="margin:8px 0 0">Podés usar {nombre}, {nombreCompleto}, {dia}, {fecha} y {hora}.</div>
+      <div class="sub" style="margin:8px 0 0">En los dos de arriba podés usar {nombre}, {nombreCompleto}, {dia}, {fecha} y {hora}.</div>
+      <label for="aPlaR">Mensaje de resumen de fin de mes</label>
+      <textarea id="aPlaR" style="min-height:120px">${esc(db.config.plantillaCierre)}</textarea>
+      <div class="sub" style="margin:8px 0 0">Acá podés usar {nombre}, {nombreCompleto}, {mes}, {anio}, {cantidad}, {asistidas}, {faltas}, {detalle}, {arancel} y {total}.</div>
       <button class="btn" id="aGuardar">Guardar mensajes</button>
     </div>
     <h2 class="titulo" style="margin-top:22px">Consultorio compartido</h2>
@@ -1889,6 +2044,7 @@ function vistaAjustes(){
     db.config.codigoPais = $("#aCc").value.replace(/\D/g,"") || "598";
     db.config.plantilla = $("#aPla").value.trim() || CONFIG_DEF.plantilla;
     db.config.plantillaCambio = $("#aPlaC").value.trim() || CONFIG_DEF.plantillaCambio;
+    db.config.plantillaCierre = $("#aPlaR").value.trim() || CONFIG_DEF.plantillaCierre;
     selloConfig();
     await persistir(); toast("Mensajes guardados"); vistaAjustes();
   };
@@ -1983,7 +2139,8 @@ function vistaAjustes(){
     consultas: (guardado && guardado.consultas) || [],
     config: Object.assign({}, CONFIG_DEF, (guardado && guardado.config) || {}),
     configMod: (guardado && guardado.configMod) || 0,
-    borrados: (guardado && guardado.borrados) || {}
+    borrados: (guardado && guardado.borrados) || {},
+    avisos: (guardado && guardado.avisos) || {}
   };
   // Los códigos del bloque CONSULTORIO mandan sobre lo guardado: así, si se
   // corrigen en el archivo, se corrigen en todos los dispositivos al recargar.
