@@ -213,7 +213,14 @@ nav button[aria-current="page"]{color:var(--pine);font-weight:600}
 }
 
 /* ---------- vista de día: la grilla horaria ---------- */
-.diaNav{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+/* La barra del día queda pegada bajo el encabezado al bajar por la grilla.
+   La altura real del header depende del teléfono y de la safe area, así que
+   medirPegados() la pasa por variables CSS. El -1px tapa el borde sub-píxel. */
+.diaNav{
+  display:flex;align-items:center;gap:8px;margin-bottom:12px;
+  position:sticky;top:calc(var(--altoHeader,72px) - 1px);z-index:21;
+  background:var(--paper);
+}
 .diaNav button{
   flex:0 0 auto;width:42px;height:42px;border:1px solid var(--line);background:var(--surface);
   border-radius:11px;font-size:19px;color:var(--pine);cursor:pointer;font-family:inherit;line-height:1;
@@ -229,7 +236,9 @@ nav button[aria-current="page"]{color:var(--pine);font-weight:600}
   padding:0 4px 10px;
 }
 .resumen b{color:var(--pine);font-weight:600}
-.grilla{background:var(--surface);border-radius:var(--radius);overflow:hidden;box-shadow:0 1px 2px rgba(11,61,51,.07)}
+/* overflow:clip recorta las esquinas sin crear un contenedor de scroll,
+   que es lo que anularía el sticky del cabezal; hidden queda de respaldo. */
+.grilla{background:var(--surface);border-radius:var(--radius);overflow:hidden;overflow:clip;box-shadow:0 1px 2px rgba(11,61,51,.07)}
 .slot{display:flex;border-bottom:1px solid var(--line);min-height:46px}
 .slot:last-child{border-bottom:0}
 .slot .h{
@@ -256,7 +265,10 @@ nav button[aria-current="page"]{color:var(--pine);font-weight:600}
 .ocupadas b{color:var(--ink);font-weight:600}
 
 /* ---------- grilla de dos salas ---------- */
-.cabSalas{display:flex;border-bottom:1px solid var(--line);background:#F4F7F5}
+.cabSalas{
+  display:flex;border-bottom:1px solid var(--line);background:#F4F7F5;
+  position:sticky;top:calc(var(--altoHeader,72px) + var(--altoDiaNav,43px) - 2px);z-index:20;
+}
 .cabSalas .h{flex:0 0 52px;border-right:1px solid var(--line)}
 .cabSalas .cab{
   flex:1;text-align:center;font-size:12px;font-weight:600;padding:8px 4px;
@@ -951,7 +963,13 @@ function durTxt(m){
 }
 
 function miles(v){ return String(Math.round(Math.abs(v))).replace(/\B(?=(\d{3})+(?!\d))/g,"."); }
-function plata(v){ const n=Number(v)||0; return (db.config.moneda||"$")+" "+(n<0?"-":"")+miles(n); }
+/* La moneda entra al HTML sin esc() (y también a mensajes y CSV, donde las
+   entidades molestarían): se le quitan < y > acá, el único punto de salida. */
+function plata(v){
+  const m = String(db.config.moneda||"$").replace(/[<>]/g,"") || "$";
+  const n = Number(v)||0;
+  return m+" "+(n<0?"-":"")+miles(n);
+}
 function importeDe(c){
   if (c && c.monto !== undefined && c.monto !== null && c.monto !== "") return Number(c.monto)||0;
   const p = paciente(c && c.pacienteId);
@@ -1082,7 +1100,10 @@ function vistaAgenda(){
   const chips = [["hoy","Hoy"],["manana","Mañana"],["semana","7 días"],["proximas","Próximas"],["pasadas","Anteriores"],["todas","Todas"]]
     .map(([k,t])=>`<button class="chip" data-f="${k}" aria-pressed="${filtro===k}">${t}</button>`).join("");
 
-  const pend = lista.filter(c=>c.estado==="pendiente" && c.fecha<hoy).length;  const aviso = (filtro==="hoy"||filtro==="proximas") && pend
+  // Sobre todas las consultas, no sobre la lista: filtrada por "hoy" o
+  // "próximas" nunca trae fechas anteriores.
+  const pend = db.consultas.filter(c=>c.estado==="pendiente" && c.fecha<hoy).length;
+  const aviso = (filtro==="hoy"||filtro==="proximas") && pend
     ? `<div class="aviso">Tenés ${pend} consulta${pend>1?"s":""} de días anteriores sin marcar. Mirá <b>Anteriores</b> para cerrarlas.</div>` : "";
 
   const cuerpo = lista.length ? lista.map(tarjeta).join("") : `<div class="vacio"><b>No hay consultas acá</b>Tocá el botón + para agendar la primera.</div>`;
@@ -1377,6 +1398,17 @@ function formConsulta(id, pre){
 }
 
 /* ---- vista de día ---- */
+/* Alturas reales del encabezado y de la barra de día, para el sticky del
+   CSS: cambian con la safe area, el tamaño de letra y el modo escritorio. */
+function medirPegados(){
+  const raiz = document.documentElement.style;
+  const cab = document.querySelector("header");
+  if (cab) raiz.setProperty("--altoHeader", cab.getBoundingClientRect().height + "px");
+  const nav = document.querySelector(".diaNav");
+  if (nav) raiz.setProperty("--altoDiaNav", nav.getBoundingClientRect().height + "px");
+}
+window.addEventListener("resize", medirPegados);
+
 const cap = s => String(s).charAt(0).toUpperCase() + String(s).slice(1);
 const estadoTxt = e => e==="asistio" ? "asistió" : (e==="falto" ? "faltó" : (e==="cancelada" ? "cancelada" : "pendiente"));
 
@@ -1465,6 +1497,7 @@ function vistaDia(){
     d.addEventListener("click", ()=> formConsulta(null, {fecha: diaSel, hora: d.dataset.libre, sala: d.dataset.sala})));
   document.querySelectorAll("[data-cita]").forEach(d=>
     d.addEventListener("click", ()=> menuConsulta(d.dataset.cita)));
+  medirPegados();
 }
 
 /* ---- pacientes ---- */
@@ -1887,6 +1920,7 @@ function vistaMes(){
       .concat(["Totales;"+tot.a+";"+tot.f+";"+tot.p+";"+filas.reduce((a,r)=>a+r.cancelada,0)+";"+tot.t+";"+tot.i]).join("\n");
     bajar(csv, "consultas-"+mesSel+".csv", "text/csv");
   };
+  medirPegados();
 }
 
 const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -2109,7 +2143,8 @@ function vistaAjustes(){
         db = {
           pacientes: d.pacientes.map(sello), consultas: d.consultas.map(sello),
           config: Object.assign({}, CONFIG_DEF, d.config||{}),
-          configMod: Date.now(), borrados: Object.assign({}, db.borrados)
+          configMod: Date.now(), borrados: Object.assign({}, db.borrados),
+          avisos: Object.assign({}, d.avisos||{})
         };
         viejos.forEach(id=>{ if (!nuevos.has(id)) tumba(id); });
         await persistir(); render(); toast("Datos restaurados");
@@ -2123,7 +2158,7 @@ function vistaAjustes(){
     db.pacientes.concat(db.consultas).forEach(x=> tumba(x.id));
     db = {
       pacientes:[], consultas:[], config:Object.assign({},CONFIG_DEF, {driveId: db.config.driveId||""}),
-      configMod: Date.now(), borrados: db.borrados
+      configMod: Date.now(), borrados: db.borrados, avisos: {}
     };
     await persistir(); render(); toast("Datos borrados");
   };

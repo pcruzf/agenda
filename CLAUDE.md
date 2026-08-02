@@ -1,0 +1,247 @@
+# Agenda de consultorio
+
+Aplicación web para un consultorio de psicólogas en Uruguay. En producción en
+`https://pcruzf.github.io/agenda/`. Se usa a diario: **los cambios se despliegan
+directo a gente trabajando**, así que conviene verificar antes de subir.
+
+---
+
+## Restricciones del proyecto (leer antes de tocar nada)
+
+1. **Sin build, sin dependencias, sin framework.** Todo es HTML/CSS/JS plano en
+   archivos únicos autocontenidos. No agregar npm, bundlers, React, Tailwind ni
+   CDNs. Se sube el archivo a GitHub Pages y funciona. Esto no es una limitación
+   a superar: es lo que hace que la persona que lo mantiene pueda seguir
+   haciéndolo.
+2. **Todo en español rioplatense**, código y comentarios incluidos: `voseo`
+   ("avisame", "tocá", "cargalo"), nombres de funciones y variables en español
+   (`vistaSemana`, `huecosDe`, `plata`, `sello`). Mantener ese registro.
+3. **Los datos de pacientes nunca salen del Drive privado de cada usuaria.**
+   Ver "Modelo de datos". Cualquier cambio que mueva información de pacientes
+   hacia la planilla compartida es un error grave, no una decisión de diseño.
+4. **Compatibilidad iOS.** Safari no soporta `input type="month"` (por eso hay
+   dos `<select>`), bloquea popups que no salen de un gesto directo del usuario,
+   y borra el almacenamiento a los 7 días si la app no está instalada. No
+   introducir `await` entre el clic y `requestAccessToken()`.
+
+---
+
+## Archivos
+
+| Archivo | Líneas | Rol |
+|---|---|---|
+| `index.html` | ~2180 | La app completa: agenda, pacientes, cierre mensual, ajustes |
+| `tablero.html` | ~715 | Horario compartido de solo lectura (semana / mes) |
+| `sw.js` | 36 | Service worker, red-primero con caché de respaldo |
+| `manifest.json` | — | Instalación como app (scope `./`) |
+| `icon-180/192/512.png` | — | Iconos |
+| `INSTRUCTIVO.md` | — | Manual para las usuarias, no técnico |
+
+Cada HTML tiene un único `<style>` y un único `<script>` con `"use strict"`.
+
+**Al modificar `index.html` o `tablero.html`, subir la versión del caché en
+`sw.js`** (`agenda-v11` → `agenda-v12`), o los teléfonos siguen con la versión
+vieja.
+
+---
+
+## Configuración
+
+Bloque `CONSULTORIO` al inicio del `<script>` de ambos HTML. Valores fijados en
+el código para que ninguna usuaria tenga que pegar nada (pegar el ID por mensaje
+causaba `Error 401: invalid_client` por texto cortado):
+
+```js
+const CONSULTORIO = {
+  clienteId: "502751961059-...apps.googleusercontent.com",
+  hojaId:    "1gs_xYxJKDtr...",
+  csvPublicado: "https://docs.google.com/.../pub?...output=csv"  // solo tablero
+};
+```
+
+En `index.html` estos valores **pisan** lo guardado en el dispositivo al
+arrancar, así que corregirlos acá los corrige en todos lados al recargar.
+
+Requiere en Google Cloud: **Drive API y Sheets API habilitadas**, y el correo de
+cada psicóloga en *Usuarios de prueba* (la app está en modo Testing).
+
+---
+
+## Modelo de datos
+
+Dos capas separadas. **Esta separación es la garantía de privacidad y no debe
+difuminarse.**
+
+### Capa privada — JSON en el Drive de cada usuaria
+
+Archivo `agenda-consultorio.json`, creado por la app con scope `drive.file`
+(Google solo le da acceso a los archivos que ella misma creó, así que una
+instancia no puede leer el archivo de otra usuaria ni aunque quisiera).
+
+```js
+db = {
+  pacientes: [{ id, nombre, telefono, arancel, notas, mod }],
+  consultas: [{ id, pacienteId, fecha, hora, dur, sala, monto, notas,
+                estado, recordado, movida, origen, mod }],
+  config:    { ...CONFIG_DEF },
+  configMod: 0,          // marca de tiempo de config
+  borrados:  {},         // id -> timestamp (papelera)
+  avisos:    {}          // "AAAA-MM:pacienteId" -> timestamp (resumen enviado)
+}
+```
+
+- `fecha`: `"AAAA-MM-DD"` · `hora`: `"HH:MM"` · `dur`: minutos · `sala`:
+  `"naranja"` | `"azul"`
+- `estado`: `"pendiente"` | `"asistio"` | `"falto"` | `"cancelada"`
+- `monto` y `arancel`: entero, o `""` si no se cargó. `importeDe(c)` cae al
+  arancel del paciente cuando la consulta no tiene monto propio.
+- `mod`: timestamp de última modificación. **Obligatorio en todo cambio.**
+
+### Capa compartida — una planilla de Google para todas
+
+Pestaña `Reservas`, creada automáticamente si falta. Solo estas columnas:
+
+```
+id | fecha | hora | fin | minutos | sala | profesional | estado | actualizado | propietaria
+```
+
+Sin pacientes, sin teléfonos, sin importes. `propietaria` es `config.profId`
+(identificador anónimo autogenerado, no es el correo).
+
+---
+
+## Sincronización
+
+### Drive (objeto `Sync`)
+
+Bajar → `fundir(local, remoto)` → guardar → subir. La fusión es **por registro,
+no por archivo**: cada paciente y cada consulta gana o pierde según su `mod`.
+Sin esto, marcar asistencias en el celular con la PC abierta perdía datos.
+
+Reglas de `fundir()`:
+- De cada `id` sobrevive la versión con `mod` mayor.
+- Un `id` en `borrados` se elimina **salvo** que su `mod` sea posterior al
+  borrado (editar después de borrar gana).
+- Las tumbas se purgan a los 180 días.
+- `config` completo gana el de `configMod` mayor (no se fusiona campo a campo).
+- `avisos`: unión, gana el timestamp mayor.
+
+**Invariantes verificadas y que hay que preservar:** idempotencia
+(`fundir(x,x) === x`), una copia vieja nunca pisa una nueva, los registros sin
+`mod` sobreviven (datos previos a esta versión).
+
+### Planilla (objeto `Salas`)
+
+Lee todas las filas, separa las ajenas (`propietaria !== profId`) hacia la
+variable global `ajenas`, y publica/actualiza las propias de los últimos 90
+días. Las canceladas se marcan `estado: "cancelada"`, las borradas `"borrada"`.
+
+### Manejo de errores de Google — cuidado acá
+
+Hubo un bucle infinito por tratar cualquier 403 como token vencido: se borraba
+un token válido, se reintentaba cada 5 s, indefinidamente. **Reglas actuales:**
+
+- **Solo el 401 invalida el token.** Un 403 puede ser una API sin habilitar o un
+  permiso faltante; borrar el token ahí no arregla nada.
+- Excepción: 403 con `insufficient|scope` en el mensaje sí invalida (falta un
+  scope nuevo).
+- `fallos >= 3` corta los reintentos automáticos; solo un toque del usuario los
+  reanuda (`Sync.fallos = 0`).
+- `silencioUsado` permite **un solo** intento silencioso de token por carga.
+- `mensajeGoogle(status, razon, msg)` traduce a texto accionable en español.
+  Ampliarla en vez de mostrar códigos crudos.
+
+---
+
+## Estructura de la interfaz (`index.html`)
+
+`render()` despacha según la variable global `tab` a: `vistaAgenda()`,
+`vistaDia()`, `vistaPacientes()`, `vistaMes()`, `vistaAjustes()`. La pestaña
+*Horario general* es un `<a href="tablero.html">`, **sin `target="_blank"`**
+(con `_blank` el botón atrás de Android cerraba la app entera).
+
+Los diálogos usan `abrir(html)` / `cerrar()` sobre `#velo` > `#hojaModal`. Todo
+se re-renderiza con plantillas de cadena; no hay diffing. Escapar **siempre**
+con `esc()` lo que venga de datos.
+
+Funciones principales por área:
+
+- Agenda: `tarjeta()`, `conectarTarjetas()`, `menuConsulta()`
+- Consultas: `formConsulta(id, pre)`, `reprogramar(id)`, `variasConsultas(id)`
+- Día: `vistaDia()`, `ocupacionDe(fecha, sala, exceptoId)` — mezcla propias y
+  ajenas para detectar choques de sala
+- Pacientes: `vistaPacientes()`, `formPaciente()`, `fichaPaciente()`
+- Mes: `datosMes(mes)`, `resumenMes(pacienteId, mes)`, `mensajeCierre()`,
+  `pantallaCierres(mes)`, `avisoCierre()`
+- Mensajes: `mensajeDe(c, tipo)` con `tipo` `"recordatorio"` | `"cambio"`,
+  `enlaceWA()`, `telWhatsApp()`
+- Diagnóstico: `diagnostico()` — texto copiable para depurar a distancia
+
+---
+
+## El tablero (`tablero.html`)
+
+Solo lectura. Prefiere `csvPublicado` (sin login); si está vacío usa la Sheets
+API con scope `spreadsheets.readonly`.
+
+Decisiones de diseño **deliberadas**, no accidentes:
+
+- **Los huecos libres se dibujan como bloques con su duración** ("2 h libre").
+  Planificar es buscar huecos, no leer reservas. `huecosDe()` fusiona los
+  ocupados y devuelve los espacios ≥ 30 min.
+- Los huecos **solo se dibujan en días que ya tienen algo agendado**; un día
+  entero vacío ya se lee como vacío y marcarlo era ruido.
+- **Sábado y domingo se ocultan** si nadie reservó ese fin de semana; las
+  columnas restantes se ensanchan (`--cols` dinámico).
+- Un color estable por psicóloga vía `tonoDe(nombre)` (hash sobre `TONOS`). La
+  sala ya está codificada por sección, así que el color codifica la persona.
+- Impresión apaisada **con colores** (`print-color-adjust: exact`): el artefacto
+  de referencia es el horario que se cuelga en la pared.
+
+---
+
+## Identidad visual
+
+Compartida por ambos archivos, en variables CSS:
+
+```
+--pine #0B3D33   --ochre #C98A17   --paper #E9EDEA   --ink #16211F
+--line #D3DBD7   sala naranja #C96A17   sala azul #2A6099
+serif Georgia (títulos)   system-ui (resto)   .num = cifras tabulares
+```
+
+Móvil: barra inferior de 6 pestañas (verificada sin cortes hasta 320 px).
+Escritorio (≥ 900 px): barra lateral de 224 px.
+
+---
+
+## Cómo verificar los cambios
+
+No hay suite de tests. El método usado hasta ahora, que conviene mantener:
+
+1. **Sintaxis**: extraer el `<script>` con una regex y `node --check`.
+2. **Lógica pura**: recortar el archivo hasta antes del bloque de arranque,
+   stubbear `document`/`window`/`location`, y ejercitar las funciones. Las áreas
+   que más lo necesitan: `fundir()`, `huecosDe()`, `resumenMes()`,
+   `ocupacionDe()`, `mesSumar()` (bordes de año), `telWhatsApp()`.
+3. **Interfaz**: Playwright con Chromium. Cargar el HTML con `Store.cargar`
+   sobrescrito para inyectar datos de ejemplo, capturar `pageerror`, y medir
+   (`scrollWidth > clientWidth`) en 320 / 390 / 1200 px antes de dar por buena
+   una maquetación.
+
+Casos borde que ya rompieron algo alguna vez: cambio de año en la navegación de
+meses, consultas solapadas en la misma sala, huecos de menos de 30 min,
+registros heredados sin `mod`, nombres con coma en el CSV, teléfonos con y sin
+código de país.
+
+---
+
+## Contexto de uso
+
+Las usuarias son psicólogas, no técnicas. Los mensajes de error tienen que decir
+**qué hacer**, no qué falló. Si algo se rompe estando ellas con un paciente
+esperando, no hay a quién llamar.
+
+Los datos son sensibles bajo la ley 18.331 uruguaya (datos personales, y de
+salud por el contexto). Al agregar funciones, la pregunta por defecto es qué
+pasa si alguien más ve esto.
