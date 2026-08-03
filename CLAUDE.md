@@ -111,6 +111,13 @@ Sin pacientes, sin teléfonos, sin importes. `propietaria` es `config.profId`
 
 ### Alquiler de salas (solo la administradora)
 
+**Quién lo ve:** solo los `profId` listados en `CONSULTORIO.administradoras`.
+A las demás no se les dibuja ni el panel de Mes ni la sección de Ajustes
+(`esAdministradora()`). Es ocultamiento de interfaz, **no** de código:
+`index.html` es público y cualquiera puede leerlo. Lo que sí queda privado son
+los precios, que viven en el Drive de cada administradora. Cada una encuentra su
+`profId` en Ajustes → Diagnóstico.
+
 `config.alquiler` guarda `{ "<profId>": { nombre, precio } }` — precio por hora
 en pesos. Vive en el Drive privado de quien administra el cobro; ninguna otra
 psicóloga lo ve, y **no se agrega ninguna columna a la planilla compartida**.
@@ -235,8 +242,15 @@ Compartida por ambos archivos, en variables CSS:
 serif Georgia (títulos)   system-ui (resto)   .num = cifras tabulares
 ```
 
-Móvil: barra inferior de 6 pestañas (verificada sin cortes hasta 320 px).
-Escritorio (≥ 900 px): barra lateral de 224 px.
+Móvil (< 900 px): barra de 6 pestañas fija abajo, donde llega el pulgar
+(verificada sin cortes hasta 320 px). Encabezado sticky.
+
+Escritorio (≥ 900 px): la barra pasa arriba, horizontal y sticky, y el
+encabezado se desplaza (`position:static`). En el HTML `<nav>` viene **después**
+de `<main>`, así que el reordenamiento se hace con `flex` + `order` en `body`.
+El encabezado no queda sticky a propósito: si lo fuera, habría que adivinar su
+altura para posicionar la barra debajo. El primer botón se alinea con el borde
+de la columna de contenido vía `padding-left: calc(max(0px, (100% - 860px)/2) + 12px)`.
 
 ---
 

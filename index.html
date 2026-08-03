@@ -384,31 +384,38 @@ input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{
 
 /* ---------- pantalla grande: la navegación pasa a un costado ---------- */
 @media (min-width:900px){
-  body{padding-left:224px;padding-bottom:36px}
-  header{padding:20px 28px}
+  /* En pantalla grande la navegación pasa arriba, pegada al encabezado.
+     Se reordena el flujo con flex porque en el HTML <nav> viene después de
+     <main> (para que en el celular quede abajo, donde llega el pulgar). */
+  body{display:flex;flex-direction:column;padding-left:0;padding-bottom:40px}
+  /* El encabezado se desplaza y la barra queda fija arriba: así no hay que
+     adivinar la altura del encabezado para posicionar la barra. */
+  header{order:1;position:static;padding:18px 28px 14px}
   header h1{font-size:24px}
-  main{padding:22px 28px 40px;max-width:780px;margin:0}
+  nav{order:2;position:sticky;top:0;bottom:auto;border-top:0;border-bottom:1px solid var(--line)}
+  main{order:3;padding:26px 28px 40px;max-width:860px;margin:0 auto;width:100%}
+
   nav{
-    top:0;bottom:0;right:auto;width:224px;flex-direction:column;
-    border-top:0;border-right:1px solid var(--line);background:var(--surface);
-    padding:0;align-items:stretch;
+    justify-content:flex-start;gap:2px;
+    /* El primer botón se alinea con el borde del contenido, que está centrado
+       en 860px; si no, la barra queda flotando a la izquierda. */
+    padding:0 20px 0 calc(max(0px, (100% - 860px) / 2) + 12px);
+    background:var(--surface);box-shadow:0 1px 3px rgba(11,61,51,.06);
   }
-  nav::before{
-    content:"Consultorio";display:block;font-family:var(--serif);font-size:17px;
-    font-weight:600;color:var(--pine);padding:24px 20px 16px;border-bottom:1px solid var(--line);
+  nav button, nav .navLink{
+    flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;
+    padding:14px 16px;font-size:14.5px;border-radius:0;position:relative;
   }
-  nav button{
-    flex:0 0 auto;display:flex;align-items:center;gap:12px;text-align:left;
-    padding:13px 20px;font-size:15px;border-radius:0;
-  }
-  nav button svg, nav .navLink svg{margin:0;width:20px;height:20px}
-  nav .navLink{
-    display:flex;align-items:center;gap:12px;text-align:left;
-    padding:13px 20px;font-size:15px;
-  }
+  nav button svg, nav .navLink svg{margin:0;width:19px;height:19px}
   nav .navLink .corto{display:none}
   nav .navLink .largo{display:inline}
-  nav button[aria-current="page"]{background:#F1F5F3;box-shadow:inset 3px 0 0 var(--pine)}
+  nav button[aria-current="page"]{color:var(--pine);background:none}
+  nav button[aria-current="page"]::after{
+    content:"";position:absolute;left:14px;right:14px;bottom:0;height:3px;
+    background:var(--pine);border-radius:2px 2px 0 0;
+  }
+  nav button:hover, nav .navLink:hover{color:var(--pine);background:#F4F7F5}
+
   .fab{bottom:32px;right:32px;width:60px;height:60px;font-size:30px}
   .velo{align-items:center}
   .hojaModal{border-radius:16px;max-width:560px;max-height:86vh}
@@ -458,8 +465,21 @@ input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{
    ========================================================================== */
 const CONSULTORIO = {
   clienteId: "502751961059-7f8nr0fsnbfgccvae0td1qshs0dihkle.apps.googleusercontent.com",
-  hojaId:    "1gs_xYxJKDtrOfpZ6r1eUWm-9GKdJNP6n_gOiEZrlVB8"
+  hojaId:    "1gs_xYxJKDtrOfpZ6r1eUWm-9GKdJNP6n_gOiEZrlVB8",
+
+  /* Identificadores de quienes administran el cobro de las salas. Solo a ellas
+     les aparece el módulo de alquiler; a las inquilinas no se les dibuja nada.
+     Cada una encuentra el suyo en Ajustes → Diagnóstico ("Tu identificador").
+     Ojo: esto oculta la pantalla, no el código: index.html es público. Lo que
+     sí queda privado son los precios, que viven en el Drive de cada una. */
+  administradoras: []
 };
+
+/* Solo quien administra ve el módulo de alquiler de salas. */
+function esAdministradora(){
+  const lista = CONSULTORIO.administradoras || [];
+  return !!db.config.profId && lista.indexOf(db.config.profId) >= 0;
+}
 
 /* ============ almacenamiento ============ */
 const CLAVE = "agenda_consultorio_v1";
@@ -1842,6 +1862,7 @@ function textoAlquiler(profId, mes){
 }
 
 function panelAlquiler(mes){
+  if (!esAdministradora()) return "";
   const a = alquilerMes(mes);
   if (!a.hay) return "";                 // sin precios cargados, no se dibuja nada
   const nom = MESES[+mes.slice(5,7)-1] + " de " + mes.slice(0,4);
@@ -2079,6 +2100,7 @@ function diagnostico(){
   L.push("Revisión del ID: " + (mal || "formato correcto"));
   L.push("ID de planilla: " + (db.config.hojaId ? db.config.hojaId.slice(0,10)+"… ("+db.config.hojaId.length+")" : "(vacío)"));
   L.push("Nombre profesional: " + (db.config.profNombre || "(sin cargar)"));
+  L.push("Tu identificador: " + (db.config.profId || "(sin generar)"));
   L.push("Librería de Google cargada: " + (window.google && google.accounts ? "sí" : "NO"));
   L.push("Drive: " + Sync.texto() + (Sync.detalle ? " · " + Sync.detalle : ""));
   L.push("Planilla: " + (Salas.detalle || (Salas.ultima ? "al día" : "sin sincronizar")));
@@ -2142,9 +2164,9 @@ function vistaAjustes(){
         : `<div class="ocupadas" style="margin-top:10px">Reservas de las demás: <b>${ajenas.length}</b> cargadas${Salas.ultima?" · al día":""}</div>`}
     </div>
 
-    <h2 class="titulo" style="margin-top:22px">Alquiler de salas</h2>
-    <div class="sub">Solo si administrás el cobro de las salas. Si no, dejalo vacío.</div>
-    <div class="hoja">${seccionAlquiler()}</div>
+    ${esAdministradora() ? `<h2 class="titulo" style="margin-top:22px">Alquiler de salas</h2>
+    <div class="sub">Precio por hora de cada inquilina. Queda solo en tu Drive.</div>
+    <div class="hoja">${seccionAlquiler()}</div>` : ""}
 
     <h2 class="titulo" style="margin-top:22px">Sincronizar con Google Drive</h2>
     <div class="sub">Para usar la misma agenda en el celular y en la PC.</div>

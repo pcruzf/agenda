@@ -302,8 +302,18 @@ distinguirlas, usá `{asistidas}` y `{faltas}` por separado en la plantilla.
 
 ### Cobrar el alquiler de las salas
 
-Esto es solo para quien administra el cobro de las salas. Si no es tu caso, la
-sección no te aparece y podés saltear esto.
+Esto es solo para quien administra el cobro de las salas. A las demás no les
+aparece nada: ni en Ajustes ni en Mes.
+
+**Para habilitarlo:** quien administre entra a **Ajustes → Diagnóstico**, copia
+la línea *Tu identificador*, y ese valor se agrega a `administradoras` en el
+bloque `CONSULTORIO` de `index.html`. Por ejemplo:
+
+```
+administradoras: ["ms9os1woexlkfms9os1woao31h"]
+```
+
+Si administran las dos dueñas, van las dos separadas por coma.
 
 **Una vez:** en **Ajustes → Alquiler de salas** aparece la lista de las
 psicólogas que reservaron alguna vez. Poné el precio por hora de cada una y
