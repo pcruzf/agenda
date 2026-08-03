@@ -273,6 +273,17 @@ que lee estos mismos datos y los muestra por semana y por mes.
 reescribe: los cambios manuales se pierden y podés desordenar reservas de
 otras. Si hay que corregir algo, se hace desde la app.
 
+### Nombre y apellido de los pacientes
+
+Se cargan en campos separados. Los mensajes automáticos —recordatorio, cambio
+de cita y resumen del mes— saludan **solo con el nombre** ("Hola Ana,"), mientras
+que las listas y la ficha muestran nombre y apellido.
+
+Los pacientes que ya tenías cargados se separan solos la primera vez que abrís
+esta versión: el primer término queda como nombre y el resto como apellido. Si
+alguno quedó mal —por ejemplo un nombre compuesto como "María del Carmen"—
+corregilo en **Pacientes → la persona → Editar datos**.
+
 ### Avisar el resumen del mes a cada paciente
 
 Al terminar el mes, en **Mes → Enviar resúmenes a los pacientes** aparece la

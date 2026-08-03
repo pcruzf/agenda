@@ -995,7 +995,7 @@ function ocupacionDe(fecha, sala, exceptoId){
   sala = sala || "naranja";
   const propias = db.consultas
     .filter(x => x.fecha===fecha && (x.sala||"naranja")===sala && activa(x) && x.id!==exceptoId)
-    .map(x => ({ hora:x.hora, dur:durDe(x), quien: nombreDe(x.pacienteId).split(" ")[0], propia:true }));
+    .map(x => ({ hora:x.hora, dur:durDe(x), quien: pilaDe(x.pacienteId) || nombreDe(x.pacienteId), propia:true }));
   const otras = ajenas
     .filter(x => x.fecha===fecha && x.sala===sala && x.estado!=="cancelada" && x.id!==exceptoId)
     .map(x => ({ hora:x.hora, dur:x.dur, quien:x.prof, propia:false }));
@@ -1024,15 +1024,29 @@ function mensajeDe(c, tipo){
     ? (db.config.plantillaCambio || CONFIG_DEF.plantillaCambio)
     : (db.config.plantilla || CONFIG_DEF.plantilla);
   return String(base)
-    .replace(/\{nombre\}/g, (p?p.nombre:"").split(" ")[0] || "")
-    .replace(/\{nombreCompleto\}/g, p?p.nombre:"")
+    .replace(/\{nombre\}/g, pilaDe(c.pacienteId))
+    .replace(/\{nombreCompleto\}/g, nombreLargo(p))
     .replace(/\{dia\}/g, DIAS[fecha(c.fecha).getDay()])
     .replace(/\{fecha\}/g, fecha(c.fecha).getDate()+"/"+(fecha(c.fecha).getMonth()+1))
     .replace(/\{hora\}/g, c.hora||"");
 }
 
 const paciente = id => db.pacientes.find(p=>p.id===id);
-const nombreDe = id => { const p=paciente(id); return p?p.nombre:"(paciente eliminado)"; };
+/* El paciente guarda nombre y apellido por separado: así los mensajes pueden
+   tutear con el nombre de pila sin depender de partir la cadena por el espacio
+   (que fallaba con "Fernández, Lucía" o con apellidos compuestos). */
+const nombreLargo = p => p ? [p.nombre, p.apellido].filter(Boolean).join(" ").trim() : "";
+const nombreDe = id => { const p=paciente(id); return p ? (nombreLargo(p) || "(sin nombre)") : "(paciente eliminado)"; };
+const pilaDe = id => { const p=paciente(id); return p ? (p.nombre || nombreLargo(p)) : ""; };
+/* Inicial del nombre + inicial del último término del apellido, para saltear
+   partículas: "María del Carmen Silva Pérez" da MP, no MD. */
+function inicialesDe(p){
+  if (!p) return "?";
+  const n = String(p.nombre||"").trim().split(/\s+/)[0] || "";
+  const ap = String(p.apellido||"").trim().split(/\s+/).filter(Boolean);
+  const a = ap.length ? ap[ap.length-1] : "";
+  return ((n[0]||"") + (a[0]||"")).toUpperCase() || iniciales(nombreLargo(p));
+}
 const ordenar = arr => arr.slice().sort((a,b)=> (a.fecha+a.hora).localeCompare(b.fecha+b.hora));
 const iniciales = n => String(n||"?").trim().split(/\s+/).slice(0,2).map(x=>x[0]).join("").toUpperCase();
 
@@ -1246,7 +1260,7 @@ function reprogramar(id){
     const otras = ordenar(db.consultas.filter(x=>x.fecha===f && x.id!==c.id && activa(x)));
     $("#rOcup").innerHTML = otras.length
       ? `<div class="ocupadas">Ese día ya tenés: ${otras.map(x=>
-          `<b class="num">${esc(x.hora)}</b> ${esc(nombreDe(x.pacienteId).split(" ")[0])}`).join(" · ")}</div>`
+          `<b class="num">${esc(x.hora)}</b> ${esc(pilaDe(x.pacienteId) || nombreDe(x.pacienteId))}`).join(" · ")}</div>`
       : `<div class="ocupadas">Ese día está libre.</div>`;
   }
   pintar();
@@ -1307,8 +1321,8 @@ function formConsulta(id, pre){
     return;
   }
   const c = id ? db.consultas.find(x=>x.id===id) : null;
-  const ops = db.pacientes.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre))
-    .map(p=>`<option value="${p.id}" ${c&&c.pacienteId===p.id?"selected":""}>${esc(p.nombre)}</option>`).join("");
+  const ops = db.pacientes.slice().sort((a,b)=>nombreLargo(a).localeCompare(nombreLargo(b)))
+    .map(p=>`<option value="${p.id}" ${c&&c.pacienteId===p.id?"selected":""}>${esc(nombreLargo(p))}</option>`).join("");
   abrir(`<h3>${c?"Editar consulta":"Nueva consulta"}</h3>
     <label for="fPac">Paciente</label>
     <select id="fPac">${ops}</select>
@@ -1496,13 +1510,13 @@ function vistaDia(){
 function vistaPacientes(){
   const q = busqueda.toLowerCase();
   const lista = db.pacientes
-    .filter(p => !q || p.nombre.toLowerCase().includes(q) || String(p.telefono||"").includes(q))
-    .sort((a,b)=>a.nombre.localeCompare(b.nombre));
+    .filter(p => !q || nombreLargo(p).toLowerCase().includes(q) || String(p.telefono||"").includes(q))
+    .sort((a,b)=>nombreLargo(a).localeCompare(nombreLargo(b)));
   const filas = lista.map(p=>{
     const n = db.consultas.filter(c=>c.pacienteId===p.id && c.estado==="asistio").length;
     return `<div class="item" data-p="${p.id}">
-      <div class="avatar">${esc(iniciales(p.nombre))}</div>
-      <div class="txt"><b>${esc(p.nombre)}</b><span>${esc(p.telefono||"sin teléfono")}${Number(p.arancel)?" · "+plata(p.arancel):""}</span></div>
+      <div class="avatar">${esc(inicialesDe(p))}</div>
+      <div class="txt"><b>${esc(nombreLargo(p))}</b><span>${esc(p.telefono||"sin teléfono")}${Number(p.arancel)?" · "+plata(p.arancel):""}</span></div>
       <div class="cuenta"><b class="num">${n}</b>consultas</div>
     </div>`;
   }).join("");
@@ -1522,8 +1536,13 @@ function vistaPacientes(){
 function formPaciente(id){
   const p = id ? paciente(id) : null;
   abrir(`<h3>${p?"Editar paciente":"Nuevo paciente"}</h3>
-    <label for="pNom">Nombre y apellido</label>
-    <input type="text" id="pNom" value="${p?esc(p.nombre):""}" placeholder="Ej. Ana Rodríguez">
+    <div class="dosCol">
+      <div><label for="pNom">Nombre</label>
+        <input type="text" id="pNom" value="${p?esc(p.nombre||""):""}" placeholder="Ana"></div>
+      <div><label for="pApe">Apellido</label>
+        <input type="text" id="pApe" value="${p?esc(p.apellido||""):""}" placeholder="Rodríguez"></div>
+    </div>
+    <div class="sub" style="margin:6px 0 0">Los mensajes saludan solo con el nombre.</div>
     <label for="pTel">Teléfono (con código de área)</label>
     <input type="tel" id="pTel" value="${p?esc(p.telefono||""):""}" placeholder="099 123 456" inputmode="tel">
     <label for="pAra">Importe por consulta (${esc(db.config.moneda||"$")})</label>
@@ -1539,6 +1558,7 @@ function formPaciente(id){
     if (!nombre){ toast("Falta el nombre"); return; }
     const datos = {
       nombre,
+      apellido: $("#pApe").value.trim(),
       telefono: $("#pTel").value.trim(),
       arancel: $("#pAra").value === "" ? "" : (parseInt($("#pAra").value,10) || 0),
       notas: $("#pNot").value.trim()
@@ -1562,7 +1582,7 @@ function fichaPaciente(id){
         <span style="color:${c.estado==="asistio"?"var(--ok)":c.estado==="falto"?"var(--no)":"var(--ink-soft)"}">
         ${estadoTxt(c.estado)}${seCobra(c)?' · <span class="plata num">'+plata(importeDe(c))+'</span>':""}</span></div>`).join("")
     : `<div style="color:var(--ink-soft)">Sin consultas registradas</div>`;
-  abrir(`<h3>${esc(p.nombre)}</h3>
+  abrir(`<h3>${esc(nombreLargo(p))}</h3>
     <div class="sub">${esc(p.telefono||"sin teléfono")}${Number(p.arancel)?" · "+plata(p.arancel)+" por consulta":" · sin importe cargado"}${p.notas?" · "+esc(p.notas):""}</div>
     <div class="tot">
       <div><b class="num">${asist}</b><span>asistió</span></div>
@@ -1665,7 +1685,7 @@ function variasConsultas(id){
       const e = candidatas().filter(c=>marcadas.has(c.id));
       if (!e.length) return;
       if (!confirm("Se suspenden " + e.length + " consulta" + (e.length===1?"":"s") +
-        " de " + p.nombre + ".\nQuedan registradas como canceladas y las salas se liberan.\n¿Seguir?")) return;
+        " de " + nombreLargo(p) + ".\nQuedan registradas como canceladas y las salas se liberan.\n¿Seguir?")) return;
       e.forEach(c=>{ c.estado = "cancelada"; sello(c); });
       await persistir(); cerrar(); render();
       toast(e.length + " consulta" + (e.length===1?" suspendida":"s suspendidas"));
@@ -1674,7 +1694,7 @@ function variasConsultas(id){
       const e = candidatas().filter(c=>marcadas.has(c.id));
       if (!e.length) return;
       if (!confirm("Se eliminan " + e.length + " consulta" + (e.length===1?"":"s") +
-        " de " + p.nombre + ".\nEsto no se puede deshacer.\n¿Seguir?")) return;
+        " de " + nombreLargo(p) + ".\nEsto no se puede deshacer.\n¿Seguir?")) return;
       if (!confirm("Confirmá una vez más: se borran " + e.length + " consulta" + (e.length===1?"":"s") + ".")) return;
       const ids = new Set(e.map(c=>c.id));
       e.forEach(c=> tumba(c.id));
@@ -1685,7 +1705,7 @@ function variasConsultas(id){
   }
 
   abrir(`<h3>Varias consultas</h3>
-    <div class="sub">${esc(p.nombre)} · elegí el período y destildá las que quieras conservar</div>
+    <div class="sub">${esc(nombreLargo(p))} · elegí el período y destildá las que quieras conservar</div>
     <div id="vBody"></div>`);
   dibujar();
 }
@@ -1717,8 +1737,8 @@ function mensajeCierre(pacienteId, mes){
   const r = resumenMes(pacienteId, mes);
   const nom = MESES[+mes.slice(5,7)-1];
   return String(db.config.plantillaCierre || CONFIG_DEF.plantillaCierre)
-    .replace(/\{nombre\}/g, (p?p.nombre:"").split(" ")[0] || "")
-    .replace(/\{nombreCompleto\}/g, p?p.nombre:"")
+    .replace(/\{nombre\}/g, pilaDe(pacienteId))
+    .replace(/\{nombreCompleto\}/g, nombreLargo(p))
     .replace(/\{mes\}/g, nom)
     .replace(/\{anio\}/g, mes.slice(0,4))
     .replace(/\{cantidad\}/g, r.cantidad)
@@ -1744,7 +1764,7 @@ function pantallaCierres(mes){
     const p = paciente(r.id);
     const ok = avisado(r.id, mes);
     return `<button class="fichaLinea${ok?" hecho":""}" data-cierre="${r.id}">
-      <span class="ini">${esc(iniciales(r.nombre))}</span>
+      <span class="ini">${esc(inicialesDe(paciente(r.id)) )}</span>
       <span class="txt"><b>${esc(r.nombre)}</b>
         <span>${r.asistio} consulta${r.asistio===1?"":"s"}${!p||!p.telefono?" · sin teléfono":""}</span></span>
       <span class="der"><b class="num plata">${plata(r.importe)}</b>
@@ -1776,7 +1796,7 @@ function avisoCierre(pacienteId, mes, desdeLista){
   if (r.sinPrecio) alertas.push(r.sinPrecio+" consulta"+(r.sinPrecio===1?"":"s")+" sin importe cargado.");
 
   abrir(`<h3>Resumen de ${esc(nom)}</h3>
-    <div class="sub">${esc(p.nombre)} · ${r.asistidas} asistida${r.asistidas===1?"":"s"}${
+    <div class="sub">${esc(nombreLargo(p))} · ${r.asistidas} asistida${r.asistidas===1?"":"s"}${
       r.faltasCobradas?" · "+r.faltasCobradas+" falta"+(r.faltasCobradas===1?"":"s")+" cobrada"+(r.faltasCobradas===1?"":"s"):""} · ${plata(r.total)}</div>
     ${alertas.length?`<div class="aviso">${alertas.map(esc).join("<br>")}</div>`:""}
     <label>Mensaje</label>
@@ -2333,6 +2353,20 @@ function vistaAjustes(){
   if (CONSULTORIO.hojaId && db.config.hojaId !== CONSULTORIO.hojaId){
     db.config.hojaId = CONSULTORIO.hojaId; selloConfig();
   }
+  /* Los pacientes cargados antes de separar los campos tienen el nombre entero
+     en `nombre`. Se parte una sola vez: el primer término queda de nombre y el
+     resto de apellido. Si quedó mal, se corrige en la ficha. */
+  let migrados = 0;
+  db.pacientes.forEach(p=>{
+    if (p.apellido === undefined){
+      const partes = String(p.nombre||"").trim().split(/\s+/);
+      p.nombre = partes.shift() || "";
+      p.apellido = partes.join(" ");
+      sello(p); migrados++;
+    }
+  });
+  if (migrados) await Store.guardar(db);
+
   if (!db.config.profId){
     db.config.profId = nuevoId() + nuevoId();
     selloConfig();

@@ -81,7 +81,7 @@ instancia no puede leer el archivo de otra usuaria ni aunque quisiera).
 
 ```js
 db = {
-  pacientes: [{ id, nombre, telefono, arancel, notas, mod }],
+  pacientes: [{ id, nombre, apellido, telefono, arancel, notas, mod }],
   consultas: [{ id, pacienteId, fecha, hora, dur, sala, monto, notas,
                 estado, recordado, movida, origen, mod }],
   config:    { ...CONFIG_DEF },
@@ -94,6 +94,13 @@ db = {
 - `fecha`: `"AAAA-MM-DD"` · `hora`: `"HH:MM"` · `dur`: minutos · `sala`:
   `"naranja"` | `"azul"`
 - `estado`: `"pendiente"` | `"asistio"` | `"falto"` | `"cancelada"`
+- `nombre` es **solo el nombre de pila** y `apellido` va aparte. Usar los
+  ayudantes: `nombreLargo(p)` para mostrar, `pilaDe(id)` para saludar en los
+  mensajes, `inicialesDe(p)` para el avatar (saltea partículas: "María del
+  Carmen Silva Pérez" da MP). **No partir el nombre por espacios**: eso fallaba
+  con apellidos compuestos y con quien quedó cargado "Apellido, Nombre".
+  Los pacientes anteriores a este cambio se migran una vez al arrancar
+  (`apellido === undefined` → se parte el primer término).
 - `monto` y `arancel`: entero, o `""` si no se cargó. `importeDe(c)` cae al
   arancel del paciente cuando la consulta no tiene monto propio.
 - `mod`: timestamp de última modificación. **Obligatorio en todo cambio.**
@@ -259,7 +266,8 @@ de la columna de contenido vía `padding-left: calc(max(0px, (100% - 860px)/2) +
 No hay suite de tests. El método usado hasta ahora, que conviene mantener:
 
 0. **Pruebas existentes**: `node pruebas/alquiler.js` (21 casos sobre el cálculo
-   de alquiler). `pruebas/cargar.js` carga la lógica de `index.html` en un
+   de alquiler) y `node pruebas/nombres.js` (21 sobre nombre/apellido, mensajes
+   y migración). `pruebas/cargar.js` carga la lógica de `index.html` en un
    contexto de `vm` sin navegador y sirve de base para probar cualquier función
    pura nueva. Ojo: las variables del script no son propiedades del contexto,
    por eso están `poner()` y `evaluar()`; y los objetos que devuelve vienen de
