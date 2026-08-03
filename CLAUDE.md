@@ -36,6 +36,7 @@ directo a gente trabajando**, así que conviene verificar antes de subir.
 | `manifest.json` | — | Instalación como app (scope `./`) |
 | `icon-180/192/512.png` | — | Iconos |
 | `INSTRUCTIVO.md` | — | Manual para las usuarias, no técnico |
+| `pruebas/*.js` | — | Pruebas en Node sin dependencias; no afectan lo desplegado |
 
 Cada HTML tiene un único `<style>` y un único `<script>` con `"use strict"`.
 
@@ -107,6 +108,30 @@ id | fecha | hora | fin | minutos | sala | profesional | estado | actualizado | 
 
 Sin pacientes, sin teléfonos, sin importes. `propietaria` es `config.profId`
 (identificador anónimo autogenerado, no es el correo).
+
+### Alquiler de salas (solo la administradora)
+
+`config.alquiler` guarda `{ "<profId>": { nombre, precio } }` — precio por hora
+en pesos. Vive en el Drive privado de quien administra el cobro; ninguna otra
+psicóloga lo ve, y **no se agrega ninguna columna a la planilla compartida**.
+
+`alquilerMes(mes)` recorre `ajenas` (las reservas publicadas por las demás) y
+devuelve `{ filas, horas, total, hay }`. Reglas:
+
+- Se cobra `pendiente`, `asistio` y `falto`; **solo `cancelada` libera el cobro**.
+- Prorrateo exacto: `horas = minutos/60` (90 min → 1,5 h). No hay redondeo a hora.
+- Sin precio, o precio `0`, la persona no se factura.
+- `hay` es `false` si nadie tiene precio: entonces el panel no se dibuja y la
+  vista Mes queda idéntica a como la ven las que no administran.
+
+`ajenas` trae **todas** las filas de la planilla, sin filtro de fecha, así que
+los meses ya cerrados se facturan bien. El límite de 90 días es solo de
+publicación (`Salas.correr()`).
+
+**Cuidado con un caso que importa:** si `ajenas` está vacío porque la planilla
+todavía no sincronizó, el panel dice "no se leyeron las reservas", **no** "nadie
+usó las salas". Confundir esas dos situaciones en un cálculo de plata lleva a no
+cobrarle a nadie. Preservar esa distinción (`Salas.ultima`).
 
 ---
 
@@ -219,6 +244,12 @@ Escritorio (≥ 900 px): barra lateral de 224 px.
 
 No hay suite de tests. El método usado hasta ahora, que conviene mantener:
 
+0. **Pruebas existentes**: `node pruebas/alquiler.js` (21 casos sobre el cálculo
+   de alquiler). `pruebas/cargar.js` carga la lógica de `index.html` en un
+   contexto de `vm` sin navegador y sirve de base para probar cualquier función
+   pura nueva. Ojo: las variables del script no son propiedades del contexto,
+   por eso están `poner()` y `evaluar()`; y los objetos que devuelve vienen de
+   otro realm, así que `deepStrictEqual` falla aunque el contenido sea igual.
 1. **Sintaxis**: extraer el `<script>` con una regex y `node --check`.
 2. **Lógica pura**: recortar el archivo hasta antes del bloque de arranque,
    stubbear `document`/`window`/`location`, y ejercitar las funciones. Las áreas

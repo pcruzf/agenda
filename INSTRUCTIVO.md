@@ -300,6 +300,33 @@ Nota: si tenés activado el cobro de faltas, `{cantidad}` y `{detalle}` incluyen
 las faltas cobradas, porque es lo que se está facturando. Si preferís
 distinguirlas, usá `{asistidas}` y `{faltas}` por separado en la plantilla.
 
+### Cobrar el alquiler de las salas
+
+Esto es solo para quien administra el cobro de las salas. Si no es tu caso, la
+sección no te aparece y podés saltear esto.
+
+**Una vez:** en **Ajustes → Alquiler de salas** aparece la lista de las
+psicólogas que reservaron alguna vez. Poné el precio por hora de cada una y
+tocá *Guardar precios*. A quien le dejes el precio vacío no se le factura, así
+que si sos dos dueñas, dejá vacía a la otra.
+
+Los precios quedan **solo en tu Drive**: las demás no los ven, y no se agrega
+nada a la planilla compartida.
+
+**Cada mes:** en **Mes**, elegí el mes y bajá hasta *Alquiler de salas*. Está
+la tabla con las horas de cada una, el precio y el total a cobrar. Tocando una
+fila se ve el detalle de sus reservas, con un botón para copiarlo y mandárselo.
+
+Cómo se cuenta:
+
+- Se cobran las horas **reservadas**, marque la inquilina "asistió" o "faltó":
+  la sala estuvo ocupada igual.
+- **Solo las canceladas no se cobran**, porque cancelar libera la sala.
+- Las fracciones se prorratean: una sesión de 90 minutos cobra 1,5 horas.
+
+Si el panel dice que todavía no se leyeron las reservas, sincronizá desde
+Ajustes antes de cobrar: el cálculo estaría incompleto.
+
 ### Dar de baja varias consultas de una vez
 
 Cuando alguien suspende la terapia por vacaciones o deja de venir, no hace

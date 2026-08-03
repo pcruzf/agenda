@@ -213,14 +213,7 @@ nav button[aria-current="page"]{color:var(--pine);font-weight:600}
 }
 
 /* ---------- vista de día: la grilla horaria ---------- */
-/* La barra del día queda pegada bajo el encabezado al bajar por la grilla.
-   La altura real del header depende del teléfono y de la safe area, así que
-   medirPegados() la pasa por variables CSS. El -1px tapa el borde sub-píxel. */
-.diaNav{
-  display:flex;align-items:center;gap:8px;margin-bottom:12px;
-  position:sticky;top:calc(var(--altoHeader,72px) - 1px);z-index:21;
-  background:var(--paper);
-}
+.diaNav{display:flex;align-items:center;gap:8px;margin-bottom:12px}
 .diaNav button{
   flex:0 0 auto;width:42px;height:42px;border:1px solid var(--line);background:var(--surface);
   border-radius:11px;font-size:19px;color:var(--pine);cursor:pointer;font-family:inherit;line-height:1;
@@ -236,9 +229,7 @@ nav button[aria-current="page"]{color:var(--pine);font-weight:600}
   padding:0 4px 10px;
 }
 .resumen b{color:var(--pine);font-weight:600}
-/* overflow:clip recorta las esquinas sin crear un contenedor de scroll,
-   que es lo que anularía el sticky del cabezal; hidden queda de respaldo. */
-.grilla{background:var(--surface);border-radius:var(--radius);overflow:hidden;overflow:clip;box-shadow:0 1px 2px rgba(11,61,51,.07)}
+.grilla{background:var(--surface);border-radius:var(--radius);overflow:hidden;box-shadow:0 1px 2px rgba(11,61,51,.07)}
 .slot{display:flex;border-bottom:1px solid var(--line);min-height:46px}
 .slot:last-child{border-bottom:0}
 .slot .h{
@@ -265,10 +256,7 @@ nav button[aria-current="page"]{color:var(--pine);font-weight:600}
 .ocupadas b{color:var(--ink);font-weight:600}
 
 /* ---------- grilla de dos salas ---------- */
-.cabSalas{
-  display:flex;border-bottom:1px solid var(--line);background:#F4F7F5;
-  position:sticky;top:calc(var(--altoHeader,72px) + var(--altoDiaNav,43px) - 2px);z-index:20;
-}
+.cabSalas{display:flex;border-bottom:1px solid var(--line);background:#F4F7F5}
 .cabSalas .h{flex:0 0 52px;border-right:1px solid var(--line)}
 .cabSalas .cab{
   flex:1;text-align:center;font-size:12px;font-weight:600;padding:8px 4px;
@@ -518,7 +506,11 @@ const CONFIG_DEF = {
   profId: "",
   salaDef: "naranja",
   plantillaCambio: "Hola {nombre}, cambiamos tu consulta para el {dia} {fecha} a las {hora}. Cualquier cosa avisame. ¡Gracias!",
-  plantillaCierre: "Hola {nombre}, te paso el resumen de {mes}: {cantidad} consultas ({detalle}). Total: {total}. Cualquier duda avisame. ¡Gracias!"
+  plantillaCierre: "Hola {nombre}, te paso el resumen de {mes}: {cantidad} consultas ({detalle}). Total: {total}. Cualquier duda avisame. ¡Gracias!",
+  /* Precio por hora que se le cobra a cada inquilina, por profId:
+     { "<profId>": { nombre: "...", precio: 1200 } }. Vive solo en el Drive
+     de quien administra el cobro; ninguna otra psicóloga lo ve. */
+  alquiler: {}
 };
 
 const SALAS = [
@@ -883,7 +875,8 @@ const Salas = {
         if (f[9] !== yo && f[7] !== "borrada"){
           otras.push({ id:f[0], fecha:f[1], hora:f[2], dur:parseInt(f[4],10)||60,
                        sala: String(f[5]||"").toLowerCase().indexOf("azul")>=0 ? "azul" : "naranja",
-                       prof: f[6] || "otra psicóloga", estado: f[7] || "reservada" });
+                       prof: f[6] || "otra psicóloga", estado: f[7] || "reservada",
+                       propietaria: f[9] || "" });
         }
       }
       ajenas = otras;
@@ -963,13 +956,7 @@ function durTxt(m){
 }
 
 function miles(v){ return String(Math.round(Math.abs(v))).replace(/\B(?=(\d{3})+(?!\d))/g,"."); }
-/* La moneda entra al HTML sin esc() (y también a mensajes y CSV, donde las
-   entidades molestarían): se le quitan < y > acá, el único punto de salida. */
-function plata(v){
-  const m = String(db.config.moneda||"$").replace(/[<>]/g,"") || "$";
-  const n = Number(v)||0;
-  return m+" "+(n<0?"-":"")+miles(n);
-}
+function plata(v){ const n=Number(v)||0; return (db.config.moneda||"$")+" "+(n<0?"-":"")+miles(n); }
 function importeDe(c){
   if (c && c.monto !== undefined && c.monto !== null && c.monto !== "") return Number(c.monto)||0;
   const p = paciente(c && c.pacienteId);
@@ -1100,10 +1087,7 @@ function vistaAgenda(){
   const chips = [["hoy","Hoy"],["manana","Mañana"],["semana","7 días"],["proximas","Próximas"],["pasadas","Anteriores"],["todas","Todas"]]
     .map(([k,t])=>`<button class="chip" data-f="${k}" aria-pressed="${filtro===k}">${t}</button>`).join("");
 
-  // Sobre todas las consultas, no sobre la lista: filtrada por "hoy" o
-  // "próximas" nunca trae fechas anteriores.
-  const pend = db.consultas.filter(c=>c.estado==="pendiente" && c.fecha<hoy).length;
-  const aviso = (filtro==="hoy"||filtro==="proximas") && pend
+  const pend = lista.filter(c=>c.estado==="pendiente" && c.fecha<hoy).length;  const aviso = (filtro==="hoy"||filtro==="proximas") && pend
     ? `<div class="aviso">Tenés ${pend} consulta${pend>1?"s":""} de días anteriores sin marcar. Mirá <b>Anteriores</b> para cerrarlas.</div>` : "";
 
   const cuerpo = lista.length ? lista.map(tarjeta).join("") : `<div class="vacio"><b>No hay consultas acá</b>Tocá el botón + para agendar la primera.</div>`;
@@ -1398,17 +1382,6 @@ function formConsulta(id, pre){
 }
 
 /* ---- vista de día ---- */
-/* Alturas reales del encabezado y de la barra de día, para el sticky del
-   CSS: cambian con la safe area, el tamaño de letra y el modo escritorio. */
-function medirPegados(){
-  const raiz = document.documentElement.style;
-  const cab = document.querySelector("header");
-  if (cab) raiz.setProperty("--altoHeader", cab.getBoundingClientRect().height + "px");
-  const nav = document.querySelector(".diaNav");
-  if (nav) raiz.setProperty("--altoDiaNav", nav.getBoundingClientRect().height + "px");
-}
-window.addEventListener("resize", medirPegados);
-
 const cap = s => String(s).charAt(0).toUpperCase() + String(s).slice(1);
 const estadoTxt = e => e==="asistio" ? "asistió" : (e==="falto" ? "faltó" : (e==="cancelada" ? "cancelada" : "pendiente"));
 
@@ -1497,7 +1470,6 @@ function vistaDia(){
     d.addEventListener("click", ()=> formConsulta(null, {fecha: diaSel, hora: d.dataset.libre, sala: d.dataset.sala})));
   document.querySelectorAll("[data-cita]").forEach(d=>
     d.addEventListener("click", ()=> menuConsulta(d.dataset.cita)));
-  medirPegados();
 }
 
 /* ---- pacientes ---- */
@@ -1817,6 +1789,114 @@ function avisoCierre(pacienteId, mes, desdeLista){
   $("#cVolver").onclick = ()=> desdeLista ? pantallaCierres(mes) : cerrar();
 }
 
+/* ---- alquiler de salas ---- */
+/* Solo lo usa quien administra el cobro. Se calcula con lo que la planilla
+   compartida ya publica: nunca toca datos de pacientes ajenos. */
+function horasTxt(h){
+  const n = Math.round(h*100)/100;
+  return (Number.isInteger(n) ? String(n) : String(n).replace(".", ",")) ;
+}
+
+function alquilerMes(mes){
+  const precios = db.config.alquiler || {};
+  const porInquilina = new Map();
+  ajenas.forEach(r=>{
+    const cfg = precios[r.propietaria];
+    if (!cfg || !(Number(cfg.precio) > 0)) return;
+    if (String(r.fecha).slice(0,7) !== mes) return;
+    if (r.estado === "cancelada") return;          // cancelar libera la sala
+    if (!porInquilina.has(r.propietaria))
+      porInquilina.set(r.propietaria, {
+        profId: r.propietaria, nombre: r.prof || cfg.nombre || "(sin nombre)",
+        precio: Number(cfg.precio), minutos: 0, reservas: []
+      });
+    const f = porInquilina.get(r.propietaria);
+    f.minutos += Math.max(0, parseInt(r.dur,10) || 0);
+    f.reservas.push({ fecha:r.fecha, hora:r.hora, dur:r.dur, sala:r.sala });
+  });
+  const filas = [...porInquilina.values()].map(f=>{
+    f.horas = f.minutos/60;
+    f.total = Math.round(f.horas * f.precio);
+    f.reservas.sort((a,b)=> (a.fecha+a.hora).localeCompare(b.fecha+b.hora));
+    return f;
+  }).sort((a,b)=> b.total - a.total || a.nombre.localeCompare(b.nombre));
+  return {
+    filas: filas,
+    horas: filas.reduce((a,f)=>a+f.horas, 0),
+    total: filas.reduce((a,f)=>a+f.total, 0),
+    hay: Object.keys(precios).some(k => Number(precios[k] && precios[k].precio) > 0)
+  };
+}
+
+function textoAlquiler(profId, mes){
+  const f = alquilerMes(mes).filas.find(x=>x.profId===profId);
+  const nom = MESES[+mes.slice(5,7)-1] + " de " + mes.slice(0,4);
+  if (!f) return "Alquiler de salas — " + nom + "\nSin horas reservadas.";
+  return "Alquiler de salas — " + nom + "\n" + f.nombre + "\n" +
+    horasTxt(f.horas) + " h reservadas · " + plata(f.precio) + " por hora\n" +
+    "Total: " + plata(f.total) + "\n\n" +
+    f.reservas.map(r =>
+      corta(r.fecha) + " " + diaCorto(r.fecha) + " " + r.hora +
+      " · sala " + salaDe(r.sala).nombre + " · " + durTxt(r.dur)
+    ).join("\n");
+}
+
+function panelAlquiler(mes){
+  const a = alquilerMes(mes);
+  if (!a.hay) return "";                 // sin precios cargados, no se dibuja nada
+  const nom = MESES[+mes.slice(5,7)-1] + " de " + mes.slice(0,4);
+
+  let cuerpo;
+  if (a.filas.length){
+    cuerpo = `<table>
+      <thead><tr><th>Inquilina</th><th>Horas</th><th>$/hora</th><th>A cobrar</th></tr></thead>
+      <tbody>${a.filas.map(f=>`<tr class="clicable" data-alq="${esc(f.profId)}">
+        <td>${esc(f.nombre)}</td>
+        <td class="num">${horasTxt(f.horas)}</td>
+        <td class="num plata">${plata(f.precio)}</td>
+        <td class="num plata">${plata(f.total)}</td></tr>`).join("")}</tbody>
+      <tfoot><tr><td>Total</td><td class="num">${horasTxt(a.horas)}</td><td></td>
+        <td class="num plata">${plata(a.total)}</td></tr></tfoot>
+    </table>`;
+  } else if (!Salas.ultima){
+    /* Sin esta distinción, un fallo de sincronización se vería igual que un mes
+       sin uso, y eso en un cálculo de plata lleva a no cobrarle a nadie. */
+    cuerpo = `<div class="aviso">Todavía no se leyeron las reservas de la planilla,
+      así que este cálculo no está completo. Entrá a Ajustes y sincronizá antes de cobrar.</div>`;
+  } else {
+    cuerpo = `<div class="ocupadas">Nadie usó las salas en este mes.</div>`;
+  }
+
+  return `<div class="hoja" style="margin-top:18px">
+    <h3>Alquiler de salas</h3>
+    <div class="periodo">${nom} · se cobran las horas reservadas, salvo las canceladas</div>
+    ${cuerpo}</div>`;
+}
+
+function detalleAlquiler(profId, mes){
+  const f = alquilerMes(mes).filas.find(x=>x.profId===profId);
+  if (!f) return;
+  const nom = MESES[+mes.slice(5,7)-1] + " de " + mes.slice(0,4);
+  const lista = f.reservas.map(r=>`<div class="linea" style="cursor:default">
+      <span class="num">${corta(r.fecha)}</span>
+      <span class="dd">${diaCorto(r.fecha)}</span>
+      <span class="num hh">${esc(r.hora)}</span>
+      <span class="sl"><span class="chipSala s-${salaDe(r.sala).id}">${esc(salaDe(r.sala).nombre)}</span> ${durTxt(r.dur)}</span>
+    </div>`).join("");
+  abrir(`<h3>${esc(f.nombre)}</h3>
+    <div class="sub">${nom} · ${horasTxt(f.horas)} h · ${plata(f.precio)} por hora · <b>${plata(f.total)}</b></div>
+    <label>Reservas cobradas (${f.reservas.length})</label>
+    <div class="listaSel">${lista}</div>
+    <button class="btn" id="qCopiar">Copiar el detalle</button>
+    <button class="btn sec" id="qVolver">Volver</button>`);
+  $("#qCopiar").onclick = async ()=>{
+    const t = textoAlquiler(profId, mes);
+    try{ await navigator.clipboard.writeText(t); toast("Detalle copiado"); }
+    catch(e){ prompt("Copiá el detalle:", t); }
+  };
+  $("#qVolver").onclick = cerrar;
+}
+
 /* ---- cierre de mes ---- */
 function datosMes(mes){
   const cs = db.consultas.filter(c=>String(c.fecha).slice(0,7)===mes);
@@ -1892,6 +1972,7 @@ function vistaMes(){
     <div class="hoja"><h3>Consultas por paciente</h3>
       <div class="periodo">${nom} · ${cobra ? "se cobran las faltas" : "las faltas no se cobran"}</div>
       ${tabla}</div>
+    ${panelAlquiler(mesSel)}
     <button class="btn" id="mAvisos">Enviar resúmenes a los pacientes</button>
     <button class="btn sec" id="mCopia">Copiar el resumen para mí</button>
     <button class="btn sec" id="mCsv">Descargar planilla (CSV)</button>`;
@@ -1901,6 +1982,8 @@ function vistaMes(){
   $("#mMes").onchange = e=>{ mesSel = mesSel.slice(0,4)+"-"+e.target.value; vistaMes(); };
   $("#mAnio").onchange = e=>{ mesSel = e.target.value+"-"+mesSel.slice(5,7); vistaMes(); };
   if ($("#mAvisos")) $("#mAvisos").onclick = ()=> pantallaCierres(mesSel);
+  document.querySelectorAll("[data-alq]").forEach(t=>
+    t.addEventListener("click", ()=> detalleAlquiler(t.dataset.alq, mesSel)));
   document.querySelectorAll("[data-cli]").forEach(t=>
     t.addEventListener("click", ()=> avisoCierre(t.dataset.cli, mesSel, false)));
   $("#mCopia").onclick = async ()=>{
@@ -1920,7 +2003,6 @@ function vistaMes(){
       .concat(["Totales;"+tot.a+";"+tot.f+";"+tot.p+";"+filas.reduce((a,r)=>a+r.cancelada,0)+";"+tot.t+";"+tot.i]).join("\n");
     bajar(csv, "consultas-"+mesSel+".csv", "text/csv");
   };
-  medirPegados();
 }
 
 const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -1950,6 +2032,34 @@ async function bajar(texto, nombre, tipo){
 }
 
 /* ---- ajustes ---- */
+function seccionAlquiler(){
+  const guardados = db.config.alquiler || {};
+  /* Se listan las profesionales vistas en la planilla más las que ya tengan
+     precio, para no perder a alguien que este mes no reservó nada. */
+  const vistas = new Map();
+  ajenas.forEach(r=>{ if (r.propietaria) vistas.set(r.propietaria, r.prof || "(sin nombre)"); });
+  Object.keys(guardados).forEach(k=>{
+    if (!vistas.has(k)) vistas.set(k, (guardados[k] && guardados[k].nombre) || "(sin nombre)");
+  });
+
+  if (!vistas.size){
+    return `<div class="ocupadas">Todavía no llegaron reservas de otras psicólogas.
+      Sincronizá la planilla y volvé acá.</div>`;
+  }
+  const filas = [...vistas.entries()]
+    .sort((a,b)=> a[1].localeCompare(b[1]))
+    .map(([id,nom])=>{
+      const p = guardados[id] && Number(guardados[id].precio) ? guardados[id].precio : "";
+      return `<label for="pr_${esc(id)}">${esc(nom)}</label>
+        <input type="number" id="pr_${esc(id)}" inputmode="numeric" min="0" step="1"
+          data-precio="${esc(id)}" data-nombre="${esc(nom)}" value="${esc(p)}"
+          placeholder="precio por hora en ${esc(db.config.moneda||"$")}">`;
+    }).join("");
+  return filas + `<button class="btn" id="aAlqG">Guardar precios</button>
+    <div class="sub" style="margin-top:10px">Quien no tenga precio cargado no se factura.
+    Estos precios quedan solo en tu Drive: las demás no los ven.</div>`;
+}
+
 function diagnostico(){
   const id = db.config.driveId || "";
   const corto = id ? (id.slice(0,14) + "…" + id.slice(-28) + "  (" + id.length + " caracteres)") : "(vacío)";
@@ -2032,6 +2142,10 @@ function vistaAjustes(){
         : `<div class="ocupadas" style="margin-top:10px">Reservas de las demás: <b>${ajenas.length}</b> cargadas${Salas.ultima?" · al día":""}</div>`}
     </div>
 
+    <h2 class="titulo" style="margin-top:22px">Alquiler de salas</h2>
+    <div class="sub">Solo si administrás el cobro de las salas. Si no, dejalo vacío.</div>
+    <div class="hoja">${seccionAlquiler()}</div>
+
     <h2 class="titulo" style="margin-top:22px">Sincronizar con Google Drive</h2>
     <div class="sub">Para usar la misma agenda en el celular y en la PC.</div>
     <div class="hoja">
@@ -2081,6 +2195,19 @@ function vistaAjustes(){
     db.config.plantillaCierre = $("#aPlaR").value.trim() || CONFIG_DEF.plantillaCierre;
     selloConfig();
     await persistir(); toast("Mensajes guardados"); vistaAjustes();
+  };
+  document.querySelectorAll("[data-precio]").forEach(i=> i.addEventListener("change", ()=>{}));
+  if ($("#aAlqG")) $("#aAlqG").onclick = async ()=>{
+    const nuevo = {};
+    document.querySelectorAll("[data-precio]").forEach(i=>{
+      const v = parseInt(i.value,10) || 0;
+      nuevo[i.dataset.precio] = { nombre: i.dataset.nombre || "", precio: v };
+    });
+    db.config.alquiler = nuevo;
+    selloConfig();
+    await persistir();
+    toast("Precios guardados");
+    vistaAjustes();
   };
   $("#aEqG").onclick = async ()=>{
     db.config.profNombre = $("#aProf").value.trim();
@@ -2143,8 +2270,7 @@ function vistaAjustes(){
         db = {
           pacientes: d.pacientes.map(sello), consultas: d.consultas.map(sello),
           config: Object.assign({}, CONFIG_DEF, d.config||{}),
-          configMod: Date.now(), borrados: Object.assign({}, db.borrados),
-          avisos: Object.assign({}, d.avisos||{})
+          configMod: Date.now(), borrados: Object.assign({}, db.borrados)
         };
         viejos.forEach(id=>{ if (!nuevos.has(id)) tumba(id); });
         await persistir(); render(); toast("Datos restaurados");
@@ -2158,7 +2284,7 @@ function vistaAjustes(){
     db.pacientes.concat(db.consultas).forEach(x=> tumba(x.id));
     db = {
       pacientes:[], consultas:[], config:Object.assign({},CONFIG_DEF, {driveId: db.config.driveId||""}),
-      configMod: Date.now(), borrados: db.borrados, avisos: {}
+      configMod: Date.now(), borrados: db.borrados
     };
     await persistir(); render(); toast("Datos borrados");
   };
