@@ -225,11 +225,16 @@ API con scope `spreadsheets.readonly`.
 
 Decisiones de diseño **deliberadas**, no accidentes:
 
-- **Los huecos libres se dibujan como bloques con su duración** ("2 h libre").
-  Planificar es buscar huecos, no leer reservas. `huecosDe()` fusiona los
-  ocupados y devuelve los espacios ≥ 30 min.
-- Los huecos **solo se dibujan en días que ya tienen algo agendado**; un día
-  entero vacío ya se lee como vacío y marcarlo era ruido.
+- **En la grilla se pinta solo lo ocupado.** Se probó dibujar los huecos como
+  bloques rotulados y resultó ruidoso: se quitaron. `huecosDe()` sigue en uso,
+  pero únicamente para calcular cuántas horas quedan libres (fusiona los
+  intervalos ocupados y devuelve los espacios ≥ 30 min).
+- **El filtro de psicólogas no altera ningún cálculo ni la estructura.** El
+  rango horario, qué días se muestran y el "N reservas · X h libres" salen de
+  *todas* las reservas (`semTodas`); el filtro decide solamente qué bloques se
+  pintan (`semVisible`), y agrega "· mostrando N". Una sala está ocupada aunque
+  tengas apagada a quien la reservó: atar esas cuentas al filtro daba números
+  falsos. Vale igual para las horas libres de la vista Mes.
 - **Sábado y domingo se ocultan** si nadie reservó ese fin de semana; las
   columnas restantes se ensanchan (`--cols` dinámico).
 - Un color estable por psicóloga vía `tonoDe(nombre)` (hash sobre `TONOS`). La

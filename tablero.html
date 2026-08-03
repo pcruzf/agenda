@@ -20,7 +20,6 @@
   --ink-soft:#5C6B67;
   --line:#D3DBD7;
   --hair:#E4EAE7;
-  --libre:#F5F8F6;
   --naranja:#C96A17;
   --azul:#2A6099;
   --serif:Georgia,"Noto Serif","Times New Roman",serif;
@@ -137,13 +136,6 @@ main{padding:18px 14px 60px;max-width:1180px;margin:0 auto}
 .b.res{color:#fff}
 .b.res .q{font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .b.res .h{opacity:.82;font-size:10.5px}
-/* el hueco libre es el protagonista: se mide y se nombra */
-.b.hueco{
-  background:var(--libre);border:1px dashed #CFDAD5;color:#93A19C;
-  display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;
-}
-.b.hueco .dur{font-weight:600;color:#6E7D78}
-.b.hueco.chico{font-size:10px;padding:0 4px}
 
 /* ---------- mes ---------- */
 .mes{background:var(--surface);border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(11,61,51,.07)}
@@ -228,7 +220,6 @@ main{padding:18px 14px 60px;max-width:1180px;margin:0 auto}
   .scroll{overflow:visible}
   .rejilla{min-width:0}
   .sala{break-inside:avoid;margin-bottom:14px}
-  .b.hueco{background:#fff;border-color:#D8E0DD}
   .celda{min-height:70px}
 }
 </style>
@@ -479,7 +470,7 @@ function pintarFiltros(){
   });
 }
 
-/* ---------- huecos: se calculan y se muestran ---------- */
+/* ---------- huecos: se calculan para saber cuánto queda libre ---------- */
 function huecosDe(ocupadas, desde, hasta){
   const orden = ocupadas.slice().sort((a,b)=> a.ini - b.ini);
   const juntas = [];
@@ -502,14 +493,20 @@ function vistaSemana(){
   const lun = lunesDe(ancla);
   const todos = []; for (let i=0;i<7;i++) todos.push(sumar(lun,i));
   const rango = new Set(todos);
-  const sem = visibles().filter(r => rango.has(r.fecha));
+
+  /* La estructura de la grilla y las cuentas de ocupación salen de TODAS las
+     reservas: una sala está ocupada aunque tengas apagada a esa psicóloga.
+     El filtro decide solamente qué bloques se pintan. */
+  const semTodas = reservas.filter(r => rango.has(r.fecha) && salasOn.has(r.sala));
+  const semVisible = semTodas.filter(r => !ocultas.has(r.prof));
+  const filtrando = semVisible.length !== semTodas.length;
 
   // El fin de semana solo ocupa lugar si alguien reservó: si está vacío, se saca.
-  const dias = todos.filter((d,i)=> i < 5 || sem.some(r=>r.fecha===d));
+  const dias = todos.filter((d,i)=> i < 5 || semTodas.some(r=>r.fecha===d));
   const finSemana = dias.length > 5;
 
   let desde = 8*60, hasta = 20*60;
-  sem.forEach(r=>{
+  semTodas.forEach(r=>{
     desde = Math.min(desde, minutos(r.hora));
     hasta = Math.max(hasta, minutos(r.hora) + r.dur);
   });
@@ -522,31 +519,29 @@ function vistaSemana(){
   for (let m=desde; m<hasta; m+=60) horas += `<div class="num">${aHora(m)}</div>`;
 
   const secciones = SALAS.filter(s=>salasOn.has(s.id)).map(sala=>{
-    const dela = sem.filter(r=>r.sala===sala.id);
+    const todasSala = semTodas.filter(r=>r.sala===sala.id);
+    const verSala = semVisible.filter(r=>r.sala===sala.id);
+
     let libreTotal = 0;
     const cols = dias.map(d=>{
-      const delDia = dela.filter(r=>r.fecha===d)
-        .map(r=>({ ...r, ini:minutos(r.hora), fin:minutos(r.hora)+r.dur }));
-      const hs = huecosDe(delDia.map(x=>({ini:x.ini,fin:x.fin})), desde, hasta);
       const finde = [0,6].indexOf(fecha(d).getDay()) >= 0;
-      if (!finde) libreTotal += hs.reduce((a,x)=>a+(x.fin-x.ini),0);
 
-      const bloques = delDia.map(r=>{
-        const top = (r.ini - desde)/30, h = Math.max(1, r.dur/30);
+      // Las horas libres se miden contra lo realmente ocupado, sin filtrar.
+      if (!finde){
+        const ocupado = todasSala.filter(r=>r.fecha===d)
+          .map(r=>({ ini:minutos(r.hora), fin:minutos(r.hora)+r.dur }));
+        libreTotal += huecosDe(ocupado, desde, hasta).reduce((a,x)=>a+(x.fin-x.ini), 0);
+      }
+
+      const bloques = verSala.filter(r=>r.fecha===d).map(r=>{
+        const ini = minutos(r.hora), fin = ini + r.dur;
+        const top = (ini - desde)/30, h = Math.max(1, r.dur/30);
         const compacto = r.dur < 45;
         return `<div class="b res" style="top:${alto(top)};height:calc(${alto(h)} - 2px);background:${tonoDe(r.prof)}">
-          <span class="q">${esc(r.prof)}</span>${compacto?"":`<span class="h num">${esc(r.hora)}–${aHora(r.fin)}</span>`}</div>`;
+          <span class="q">${esc(r.prof)}</span>${compacto?"":`<span class="h num">${esc(r.hora)}–${aHora(fin)}</span>`}</div>`;
       }).join("");
 
-      // Los huecos se dibujan solo si ese día tiene algo agendado: un día
-      // entero vacío ya se lee como vacío, y marcarlo sería puro ruido.
-      const vacios = !delDia.length ? "" : hs.map(x=>{
-        const top = (x.ini - desde)/30, h = (x.fin - x.ini)/30, dur = x.fin - x.ini;
-        return `<div class="b hueco${dur<60?" chico":""}" style="top:${alto(top)};height:calc(${alto(h)} - 2px)">
-          ${dur>=60 ? `<span class="dur">${durTxt(dur)}</span><span>libre</span>` : `<span class="dur">${dur}′</span>`}</div>`;
-      }).join("");
-
-      return `<div class="dia${finde?" finde":""}${d===hoyISO()?" hoy":""}" style="height:${alto(filas)}">${vacios}${bloques}</div>`;
+      return `<div class="dia${finde?" finde":""}${d===hoyISO()?" hoy":""}" style="height:${alto(filas)}">${bloques}</div>`;
     }).join("");
 
     const cabDias = dias.map(d=>{
@@ -555,10 +550,12 @@ function vistaSemana(){
         <div class="sem">${DIAS_C[dd.getDay()]}</div><div class="fec num">${dd.getDate()}</div></div>`;
     }).join("");
 
+    const n = todasSala.length;
     return `<section class="sala">
       <div class="salaCab">
         <h2><span class="pastilla" style="background:${sala.color}"></span>Sala ${sala.nombre}</h2>
-        <span class="dato"><b>${dela.length}</b> reserva${dela.length===1?"":"s"} · <b>${durTxt(libreTotal)}</b> libres${finSemana?" de lunes a viernes":""}</span>
+        <span class="dato"><b>${n}</b> reserva${n===1?"":"s"} · <b>${durTxt(libreTotal)}</b> libres${finSemana?" de lunes a viernes":""}${
+          filtrando ? ` · mostrando ${verSala.length}` : ""}</span>
       </div>
       <div class="marco"><div class="scroll"><div class="rejilla" style="--cols:${dias.length}">
         <div class="encDias"><div class="esq"></div>${cabDias}</div>
@@ -604,11 +601,12 @@ function vistaMes(){
         <span class="hh">${esc(r.hora)}</span> ${esc(r.prof.split(" ")[0])}</div>`).join("");
     const resto = delDia.length > tope ? `<div class="mas">+${delDia.length-tope} más</div>` : "";
     let libre = "";
-    // Igual que en la semana: solo tiene sentido medir lo libre si ese día
-    // hay algo agendado. Un día sin nada ya se ve entero disponible.
-    if (!fuera && delDia.length && [0,6].indexOf(dd.getDay()) < 0){
+    /* Lo libre se mide contra TODO lo reservado, no contra lo que el filtro
+       deja ver: la sala está ocupada aunque tengas apagada a esa psicóloga. */
+    const todasDia = reservas.filter(r=>r.fecha===d && salasOn.has(r.sala));
+    if (!fuera && todasDia.length && [0,6].indexOf(dd.getDay()) < 0){
       const min = SALAS.filter(s=>salasOn.has(s.id)).reduce((a,s)=>{
-        const oc = delDia.filter(r=>r.sala===s.id).map(r=>({ini:minutos(r.hora),fin:minutos(r.hora)+r.dur}));
+        const oc = todasDia.filter(r=>r.sala===s.id).map(r=>({ini:minutos(r.hora),fin:minutos(r.hora)+r.dur}));
         return a + huecosDe(oc, 8*60, 20*60).reduce((x,h)=>x+(h.fin-h.ini),0);
       },0);
       libre = `<div class="libre">${durTxt(min)} libres</div>`;

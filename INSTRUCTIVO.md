@@ -223,13 +223,15 @@ Qué muestra:
 - **Semana**: las dos salas, una debajo de la otra. Sábado y domingo solo
   aparecen si alguien reservó ese fin de semana; si no, la semana se muestra
   de lunes a viernes y las columnas quedan más anchas. Cada
-  reserva es un bloque del color de la psicóloga. **Los huecos libres se
-  dibujan con su duración** ("2 h libre"), así se ve de un vistazo dónde entra
-  alguien. Los huecos solo aparecen en días que ya tienen algo agendado.
+  reserva es un bloque del color de la psicóloga; lo que está en blanco está
+  libre. Debajo del nombre de cada sala figura cuántas reservas tiene esa
+  semana y cuántas horas quedan libres de lunes a viernes.
 - **Mes**: el calendario entero, con las reservas de cada día y cuánto queda
   libre. Tocando un día se abre esa semana.
 - **Filtros**: se puede apagar una sala o dejar visible solo a algunas
-  psicólogas, para ver la agenda de una sola persona.
+  psicólogas, para ver la agenda de una sola persona. Filtrar no cambia las
+  cuentas de arriba: las horas libres son las de la sala, no las de quien estés
+  mirando. Cuando hay un filtro activo aparece además "mostrando N".
 - **Imprimir**: sale apaisado y con los colores, para colgar en la pared.
 - Flechas ← → para moverse, tecla **T** para volver a hoy.
 - La flecha **‹** de arriba a la izquierda vuelve a la agenda. En el celular
