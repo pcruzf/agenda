@@ -192,6 +192,15 @@ un token válido, se reintentaba cada 5 s, indefinidamente. **Reglas actuales:**
 - `fallos >= 3` corta los reintentos automáticos; solo un toque del usuario los
   reanuda (`Sync.fallos = 0`).
 - `silencioUsado` permite **un solo** intento silencioso de token por carga.
+- **El token se guarda en `sessionStorage`** (`guardarToken` / `recuperarToken`
+  / `olvidarToken`). Ir al horario general es una navegación real: `index.html`
+  se descarga y al volver se carga de cero, y sin esto se perdía el token en
+  cada ida y vuelta y Google volvía a pedir la cuenta — muy visible en Firefox,
+  que bloquea las cookies que Google usa para renovar en silencio. Muere al
+  cerrar la app, y los tokens duran ~1 h de todos modos.
+- `prompt: "consent"` **solo en la conexión inicial** (`Sync.correr(true, true)`
+  desde "Guardar y conectar"). En cualquier otro reintento va vacío: `consent`
+  reabre la pantalla de permisos completa aunque ya estén otorgados.
 - `mensajeGoogle(status, razon, msg)` traduce a texto accionable en español.
   Ampliarla en vez de mostrar códigos crudos.
 

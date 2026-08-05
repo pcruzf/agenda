@@ -472,7 +472,7 @@ const CONSULTORIO = {
      Cada una encuentra el suyo en Ajustes → Diagnóstico ("Tu identificador").
      Ojo: esto oculta la pantalla, no el código: index.html es público. Lo que
      sí queda privado son los precios, que viven en el Drive de cada una. */
-  administradoras: ["msamho2r8rxgmmsamho2rlafce"]
+  administradoras: ["ms9os1woexlkfms9os1woao31h"]
 };
 
 /* Solo quien administra ve el módulo de alquiler de salas. */
@@ -565,6 +565,7 @@ async function persistir(){ await Store.guardar(db); Sync.programar(); Salas.pro
 
 /* ============ sincronización con Google Drive ============ */
 const ARCHIVO = "agenda-consultorio.json";
+const CLAVE_TOKEN = "agenda_sesion_google";
 const ALCANCE = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets";
 
 function mezclarLista(a, b, borrados){
@@ -641,7 +642,25 @@ const Sync = {
   },
 
   /* ---- token ---- */
-  async pedirToken(interactivo){
+  /* El token vive en sessionStorage además de en memoria. Sin esto, cada ida
+     al horario general recarga index.html, se pierde el token y Google vuelve
+     a pedir la cuenta. Muere al cerrar la app; los tokens duran ~1 h igual. */
+  guardarToken(){
+    try{ sessionStorage.setItem(CLAVE_TOKEN, JSON.stringify({ t:this.token, e:this.expira })); }catch(e){}
+  },
+  recuperarToken(){
+    try{
+      const r = JSON.parse(sessionStorage.getItem(CLAVE_TOKEN) || "null");
+      if (r && r.t && Date.now() < r.e - 60000){ this.token = r.t; this.expira = r.e; }
+    }catch(e){}
+  },
+  olvidarToken(){
+    this.token = null; this.expira = 0;
+    try{ sessionStorage.removeItem(CLAVE_TOKEN); }catch(e){}
+  },
+
+  async pedirToken(interactivo, forzarConsentimiento){
+    if (!this.token) this.recuperarToken();
     if (this.token && Date.now() < this.expira - 60000) return this.token;
     if (location.protocol === "file:") throw new Error("Abrí la app desde una dirección https, no como archivo local.");
     if (!window.google || !google.accounts || !google.accounts.oauth2) throw new Error("No cargó la librería de Google. Revisá la conexión.");
@@ -671,6 +690,7 @@ const Sync = {
           self.expira = Date.now() + (Number(r.expires_in||3600)*1000);
           self.otorgado = String(r.scope || "");
           self.silencioUsado = false;
+          self.guardarToken();
           if (self.otorgado && self.otorgado.indexOf("spreadsheets") < 0){
             Salas.estado = "error";
             Salas.detalle = "No diste el permiso de planillas: reconectá y aceptá todas las casillas";
@@ -688,7 +708,10 @@ const Sync = {
                 : "No se pudo autorizar";
         const err = new Error(m); err.auth = true; mal(err);
       };
-      try{ self.cliente.requestAccessToken({ prompt: interactivo ? "consent" : "" }); }
+      /* "consent" reabre la pantalla de permisos completa: solo hace falta al
+         conectar por primera vez o al sumar un permiso nuevo. En los reintentos
+         normales se deja vacío, y Google la muestra solo si de verdad falta. */
+      try{ self.cliente.requestAccessToken({ prompt: forzarConsentimiento ? "consent" : "" }); }
       catch(e){ mal(e); }
     });
   },
@@ -710,8 +733,8 @@ const Sync = {
 
     // Solo un 401 significa que el token venció. Un 403 puede ser una API sin
     // habilitar o un permiso que falta: borrar el token ahí provocaba un loop.
-    if (r.status === 401){ this.token = null; err.auth = true; }
-    if (r.status === 403 && /insufficient|scope/i.test(msg)){ this.token = null; err.auth = true; }
+    if (r.status === 401){ this.olvidarToken(); err.auth = true; }
+    if (r.status === 403 && /insufficient|scope/i.test(msg)){ this.olvidarToken(); err.auth = true; }
     throw err;
   },
 
@@ -757,13 +780,13 @@ const Sync = {
     this.timer = setTimeout(()=> this.correr(false), 4000);
   },
 
-  async correr(interactivo){
+  async correr(interactivo, forzarConsentimiento){
     if (!this.activo() || this.corriendo) return;
     if (!navigator.onLine){ this.marcar("error", "sin conexión"); return; }
     this.corriendo = true;
     this.marcar("trabajando");
     try{
-      await this.pedirToken(interactivo);
+      await this.pedirToken(interactivo, forzarConsentimiento);
       const remoto = await this.bajar();
       const unido = fundir(db, remoto);
       const antes = JSON.stringify({p:db.pacientes, c:db.consultas, g:db.config});
@@ -2129,6 +2152,10 @@ function diagnostico(){
   else if (esAdministradora())
     L.push("Alquiler de salas: activo");
   L.push("Librería de Google cargada: " + (window.google && google.accounts ? "sí" : "NO"));
+  if (!Sync.token) Sync.recuperarToken();
+  L.push("Sesión de Google: " + (Sync.token && Date.now() < Sync.expira
+    ? "activa hasta las " + new Date(Sync.expira).toTimeString().slice(0,5)
+    : "sin token (va a pedir la cuenta)"));
   L.push("Drive: " + Sync.texto() + (Sync.detalle ? " · " + Sync.detalle : ""));
   L.push("Planilla: " + (Salas.detalle || (Salas.ultima ? "al día" : "sin sincronizar")));
   L.push("Datos: " + db.pacientes.length + " pacientes, " + db.consultas.length + " consultas");
@@ -2281,10 +2308,10 @@ function vistaAjustes(){
     if (mal && !confirm(mal + "\n\n¿Guardar igual?")) return;
     db.config.driveId = id;
     selloConfig();
-    Sync.token = null; Sync.fileId = null; Sync.cliente = null; Sync.ultima = 0;
+    Sync.olvidarToken(); Sync.fileId = null; Sync.cliente = null; Sync.ultima = 0;
     Store.guardar(db);   // sin await: un await acá rompe el gesto y Safari bloquea la ventana de Google
     if (!id){ Sync.marcar("off"); vistaAjustes(); toast("Drive desconectado"); return; }
-    Sync.correr(true).then(()=> vistaAjustes());
+    Sync.correr(true, true).then(()=> vistaAjustes());   // conexión inicial: pide permisos
   };
   $("#aSinc").onclick = ()=>{
     if (!db.config.driveId){ toast("Primero cargá el ID de cliente"); return; }
@@ -2296,7 +2323,7 @@ function vistaAjustes(){
   if ($("#aDrvOff")) $("#aDrvOff").onclick = async ()=>{
     if (!confirm("Se deja de sincronizar. Los datos siguen en este dispositivo y en Drive. ¿Seguir?")) return;
     db.config.driveId = ""; selloConfig();
-    Sync.token = null; Sync.fileId = null; Sync.cliente = null; Sync.ultima = 0;
+    Sync.olvidarToken(); Sync.fileId = null; Sync.cliente = null; Sync.ultima = 0;
     Sync.marcar("off");
     await Store.guardar(db); vistaAjustes(); toast("Drive desconectado");
   };
