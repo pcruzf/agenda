@@ -174,6 +174,32 @@ Reglas de `fundir()`:
 (`fundir(x,x) === x`), una copia vieja nunca pisa una nueva, los registros sin
 `mod` sobreviven (datos previos a esta versión).
 
+### Cuándo se sincroniza
+
+`persistir(urgente)`. Con `urgente` se sincroniza en el acto; sin él, se espera
+unos segundos. **Urgente = todo lo que cambia la ocupación de una sala**: alta,
+baja, cancelación, reactivación, reprogramación, baja múltiple, borrar un
+paciente con sus consultas, restaurar respaldo y borrar todos los datos. Marcar
+asistencia, editar notas o cambiar un teléfono no lo son (no alteran la fila
+publicada).
+
+Además:
+
+- **Al dejar la app** (`visibilitychange` → oculto, y `pagehide`) se publica lo
+  pendiente. Antes solo se sincronizaba al *volver*, que es justo cuando ya no
+  hace falta: alguien cancelaba una consulta, se iba, y la sala figuraba ocupada
+  para las demás hasta la próxima apertura.
+- Las escrituras van con `keepalive: true`, así una petición ya lanzada termina
+  aunque se cierre la app.
+- Si llega un cambio mientras hay una sincronización corriendo, se anota
+  `repetir` y se vuelve a correr al terminar. Antes se descartaba en silencio.
+- `Salas.pendiente` marca que hay algo sin publicar; el encabezado muestra
+  "publicando…". Se limpia al terminar bien.
+
+Nada de esto pierde datos aunque falle: lo local se guarda siempre y el próximo
+`Salas.correr()` recalcula la diferencia contra la planilla. Lo que se acorta es
+la ventana en que las demás ven información vieja.
+
 ### Planilla (objeto `Salas`)
 
 Lee todas las filas, separa las ajenas (`propietaria !== profId`) hacia la

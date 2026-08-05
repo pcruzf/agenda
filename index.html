@@ -561,7 +561,16 @@ function revisarHojaId(v){
   return "";
 }
 
-async function persistir(){ await Store.guardar(db); Sync.programar(); Salas.programar(); }
+/* `urgente` es para los cambios que las demás tienen que ver ya: alta, baja,
+   cancelación o cambio de horario de una consulta. Esos no esperan el respiro
+   de unos segundos, salen en el momento. Los cambios que no tocan la planilla
+   (marcar asistencia, notas, datos del paciente) siguen con espera. */
+async function persistir(urgente){
+  await Store.guardar(db);
+  if (Salas.activo()) Salas.pendiente = true;
+  if (urgente){ Sync.correr(false); Salas.correr(false); }
+  else { Sync.programar(); Salas.programar(); }
+}
 
 /* ============ sincronización con Google Drive ============ */
 const ARCHIVO = "agenda-consultorio.json";
@@ -624,6 +633,7 @@ const Sync = {
   texto(){
     if (!this.activo()) return "solo en este equipo";
     if (this.estado === "trabajando") return "sincronizando…";
+    if (Salas.pendiente && Salas.activo()) return "publicando…";
     if (this.estado === "auth") return "falta reconectar";
     if (this.estado === "error") return "sin sincronizar";
     if (this.ultima){
@@ -719,6 +729,9 @@ const Sync = {
   async api(url, opciones){
     const o = Object.assign({}, opciones);
     o.headers = Object.assign({}, o.headers, { Authorization: "Bearer " + this.token });
+    /* keepalive deja que una escritura ya lanzada termine aunque se cierre la
+       pestaña. Solo para escrituras: el límite de 64 KB no molesta acá. */
+    if (o.method && o.method !== "GET") o.keepalive = true;
     const r = await fetch(url, o);
     if (r.ok) return r;
 
@@ -781,7 +794,10 @@ const Sync = {
   },
 
   async correr(interactivo, forzarConsentimiento){
-    if (!this.activo() || this.corriendo) return;
+    if (!this.activo()) return;
+    // Si llega un cambio mientras corre, se anota para repetir al terminar:
+    // antes ese cambio se descartaba y esperaba a la próxima vez.
+    if (this.corriendo){ this.repetir = true; return; }
     if (!navigator.onLine){ this.marcar("error", "sin conexión"); return; }
     this.corriendo = true;
     this.marcar("trabajando");
@@ -802,14 +818,21 @@ const Sync = {
       this.marcar(e && e.auth ? "auth" : "error", String(e && e.message || e));
     }finally{
       this.corriendo = false;
+      if (this.repetir){ this.repetir = false; setTimeout(()=> this.correr(false), 400); }
     }
   }
 };
 
 window.addEventListener("online", ()=> Sync.programar());
+/* Al volver a la app se refresca; al DEJARLA se publica lo que quede pendiente.
+   Este segundo caso es el que importa: alguien entra, cancela una consulta y
+   se va. Si esperáramos a la próxima apertura, las demás verían la sala
+   ocupada todo ese tiempo. */
 document.addEventListener("visibilitychange", ()=>{
   if (!document.hidden){ Sync.programar(); Salas.programar(); }
+  else { Sync.correr(false); Salas.correr(false); }
 });
+window.addEventListener("pagehide", ()=>{ Sync.correr(false); Salas.correr(false); });
 
 /* ============ planilla compartida de salas ============ */
 /* Solo viajan: id, fecha, hora, duración, sala y nombre de la psicóloga.
@@ -887,7 +910,8 @@ const Salas = {
   },
 
   async correr(interactivo){
-    if (!this.activo() || this.corriendo) return;
+    if (!this.activo()) return;
+    if (this.corriendo){ this.repetir = true; return; }
     if (!navigator.onLine) return;
     if (interactivo) this.fallos = 0;
     this.corriendo = true;
@@ -958,6 +982,7 @@ const Salas = {
 
       this.ultima = Date.now();
       this.estado = "listo"; this.detalle = ""; this.fallos = 0;
+      this.pendiente = false;
       render();
     }catch(e){
       this.fallos = (this.fallos || 0) + 1;
@@ -968,6 +993,7 @@ const Salas = {
       render();
     }finally{
       this.corriendo = false;
+      if (this.repetir){ this.repetir = false; setTimeout(()=> this.correr(false), 400); }
     }
   }
 };
@@ -1242,7 +1268,7 @@ function menuConsulta(id){
   $("#mAnular").onclick = async ()=>{
     c.estado = anulada ? "pendiente" : "cancelada";
     sello(c);
-    await persistir(); cerrar(); render();
+    await persistir(true); cerrar(); render();
     toast(anulada ? "Consulta reactivada" : "Consulta cancelada");
   };
   $("#mCopiar").onclick = async ()=>{
@@ -1255,7 +1281,7 @@ function menuConsulta(id){
     if (!confirm("¿Eliminar esta consulta?")) return;
     db.consultas = db.consultas.filter(x=>x.id!==id);
     tumba(id);
-    await persistir(); cerrar(); render(); toast("Consulta eliminada");
+    await persistir(true); cerrar(); render(); toast("Consulta eliminada");
   };
 }
 
@@ -1309,7 +1335,7 @@ function reprogramar(id){
     c.estado = "pendiente";
     c.recordado = false;
     sello(c);
-    await persistir();
+    await persistir(true);
 
     if (tab === "dia") diaSel = f;
     render();
@@ -1430,7 +1456,7 @@ function formConsulta(id, pre){
       id: nuevoId(), fecha: f, estado: "pendiente", recordado: false
     }))));
 
-    await persistir(); cerrar();
+    await persistir(true); cerrar();
     if (tab === "dia") diaSel = datos.fecha;
     else if (tab !== "agenda") irA("agenda");
     render();
@@ -1629,7 +1655,7 @@ function fichaPaciente(id){
     db.pacientes = db.pacientes.filter(x=>x.id!==id);
     db.consultas = db.consultas.filter(c=>c.pacienteId!==id);
     tumba(id);
-    await persistir(); cerrar(); render(); toast("Paciente eliminado");
+    await persistir(true); cerrar(); render(); toast("Paciente eliminado");
   };
 }
 
@@ -1710,7 +1736,7 @@ function variasConsultas(id){
       if (!confirm("Se suspenden " + e.length + " consulta" + (e.length===1?"":"s") +
         " de " + nombreLargo(p) + ".\nQuedan registradas como canceladas y las salas se liberan.\n¿Seguir?")) return;
       e.forEach(c=>{ c.estado = "cancelada"; sello(c); });
-      await persistir(); cerrar(); render();
+      await persistir(true); cerrar(); render();
       toast(e.length + " consulta" + (e.length===1?" suspendida":"s suspendidas"));
     };
     $("#vElim").onclick = async ()=>{
@@ -1722,7 +1748,7 @@ function variasConsultas(id){
       const ids = new Set(e.map(c=>c.id));
       e.forEach(c=> tumba(c.id));
       db.consultas = db.consultas.filter(c=> !ids.has(c.id));
-      await persistir(); cerrar(); render();
+      await persistir(true); cerrar(); render();
       toast(e.length + " consulta" + (e.length===1?" eliminada":"s eliminadas"));
     };
   }
@@ -2349,7 +2375,7 @@ function vistaAjustes(){
           configMod: Date.now(), borrados: Object.assign({}, db.borrados)
         };
         viejos.forEach(id=>{ if (!nuevos.has(id)) tumba(id); });
-        await persistir(); render(); toast("Datos restaurados");
+        await persistir(true); render(); toast("Datos restaurados");
       }catch(err){ alert("El archivo no tiene el formato esperado. Usá uno exportado desde esta app."); }
     };
     r.readAsText(f);
@@ -2362,7 +2388,7 @@ function vistaAjustes(){
       pacientes:[], consultas:[], config:Object.assign({},CONFIG_DEF, {driveId: db.config.driveId||""}),
       configMod: Date.now(), borrados: db.borrados
     };
-    await persistir(); render(); toast("Datos borrados");
+    await persistir(true); render(); toast("Datos borrados");
   };
 }
 
