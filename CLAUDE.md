@@ -125,6 +125,11 @@ A las demás no se les dibuja ni el panel de Mes ni la sección de Ajustes
 los precios, que viven en el Drive de cada administradora. Cada una encuentra su
 `profId` en Ajustes → Diagnóstico.
 
+Con la lista vacía **no lo ve nadie**, ni quien administra. Para que ese estado
+no quede mudo, el Diagnóstico muestra "Alquiler de salas: sin configurar"
+mientras la lista está vacía, y deja de mostrarlo apenas se carga alguien. No
+quitar ese aviso: sin él, el módulo desaparece sin explicación y parece un bug.
+
 `config.alquiler` guarda `{ "<profId>": { nombre, precio } }` — precio por hora
 en pesos. Vive en el Drive privado de quien administra el cobro; ninguna otra
 psicóloga lo ve, y **no se agrega ninguna columna a la planilla compartida**.

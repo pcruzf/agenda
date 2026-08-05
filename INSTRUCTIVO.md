@@ -328,6 +328,11 @@ administradoras: ["ms9os1woexlkfms9os1woao31h"]
 
 Si administran las dos dueñas, van las dos separadas por coma.
 
+Mientras la lista esté vacía **el módulo no lo ve nadie**, ni siquiera quien
+administra. Para no quedar buscándolo, en ese caso el Diagnóstico avisa
+"Alquiler de salas: sin configurar". Una vez cargado un identificador, ese
+aviso desaparece y el Diagnóstico solo dice "activo" a quien corresponde.
+
 **Una vez:** en **Ajustes → Alquiler de salas** aparece la lista de las
 psicólogas que reservaron alguna vez. Poné el precio por hora de cada una y
 tocá *Guardar precios*. A quien le dejes el precio vacío no se le factura, así

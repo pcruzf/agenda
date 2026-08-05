@@ -472,7 +472,7 @@ const CONSULTORIO = {
      Cada una encuentra el suyo en Ajustes → Diagnóstico ("Tu identificador").
      Ojo: esto oculta la pantalla, no el código: index.html es público. Lo que
      sí queda privado son los precios, que viven en el Drive de cada una. */
-  administradoras: []
+  administradoras: ["ms9os1woexlkfms9os1woao31h"]
 };
 
 /* Solo quien administra ve el módulo de alquiler de salas. */
@@ -2121,6 +2121,13 @@ function diagnostico(){
   L.push("ID de planilla: " + (db.config.hojaId ? db.config.hojaId.slice(0,10)+"… ("+db.config.hojaId.length+")" : "(vacío)"));
   L.push("Nombre profesional: " + (db.config.profNombre || "(sin cargar)"));
   L.push("Tu identificador: " + (db.config.profId || "(sin generar)"));
+  /* Este aviso aparece solo mientras la lista está vacía, es decir durante la
+     puesta a punto. Una vez cargado un identificador, deja de mostrarse: así
+     el estado no queda mudo, pero tampoco queda un cartel permanente. */
+  if (!(CONSULTORIO.administradoras || []).length)
+    L.push("Alquiler de salas: sin configurar — para verlo, agregá el identificador de arriba a `administradoras` en index.html");
+  else if (esAdministradora())
+    L.push("Alquiler de salas: activo");
   L.push("Librería de Google cargada: " + (window.google && google.accounts ? "sí" : "NO"));
   L.push("Drive: " + Sync.texto() + (Sync.detalle ? " · " + Sync.detalle : ""));
   L.push("Planilla: " + (Salas.detalle || (Salas.ultima ? "al día" : "sin sincronizar")));
