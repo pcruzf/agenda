@@ -2372,7 +2372,10 @@ function vistaAjustes(){
         db = {
           pacientes: d.pacientes.map(sello), consultas: d.consultas.map(sello),
           config: Object.assign({}, CONFIG_DEF, d.config||{}),
-          configMod: Date.now(), borrados: Object.assign({}, db.borrados)
+          configMod: Date.now(), borrados: Object.assign({}, db.borrados),
+          /* Sin esto `avisos` quedaba sin definir tras importar y la pantalla
+             de resúmenes mensuales rompía al marcar un envío. */
+          avisos: Object.assign({}, db.avisos, d.avisos || {})
         };
         viejos.forEach(id=>{ if (!nuevos.has(id)) tumba(id); });
         await persistir(true); render(); toast("Datos restaurados");
