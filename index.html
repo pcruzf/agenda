@@ -678,6 +678,13 @@ const Sync = {
     // Sin un toque del usuario el navegador bloquea la ventana de Google.
     // Se permite un solo intento silencioso por carga: si falla, se espera
     // el toque. Sin esto los reintentos automáticos quedaban en bucle.
+    /* En una app instalada en iPhone el pedido silencioso no puede funcionar
+       (Safari bloquea las cookies de terceros que Google usa) y además suele
+       quedar sin respuesta, colgando la sincronización. Se pide el toque. */
+    if (!interactivo && esIOS && instalada()){
+      const e = new Error("Tocá acá para conectar con Google");
+      e.auth = true; throw e;
+    }
     if (!interactivo){
       if (this.silencioUsado){
         const e = new Error("Tocá para conectar con Google");
@@ -693,7 +700,23 @@ const Sync = {
         client_id: db.config.driveId, scope: ALCANCE, callback: ()=>{}
       });
     }
-    return new Promise((ok, mal)=>{
+    return new Promise((resolver, rechazar)=>{
+      /* Google puede no llamar a ninguno de los dos callbacks —pasa en las apps
+         instaladas en iPhone—. Sin este plazo la promesa quedaba colgada para
+         siempre y dejaba la sincronización trabada en "sincronizando…", incluso
+         para el botón manual. */
+      let listo = false;
+      const fin = (fn, arg) => { if (listo) return; listo = true; clearTimeout(reloj); fn(arg); };
+      const reloj = setTimeout(()=>{
+        const e = new Error(interactivo
+          ? "Google no respondió. Probá de nuevo."
+          : "Tocá acá para conectar con Google");
+        e.auth = true;
+        fin(rechazar, e);
+      }, interactivo ? 90000 : 12000);
+      const ok  = v => fin(resolver, v);
+      const mal = v => fin(rechazar, v);
+
       self.cliente.callback = r => {
         if (r && r.access_token){
           self.token = r.access_token;
@@ -795,11 +818,12 @@ const Sync = {
 
   async correr(interactivo, forzarConsentimiento){
     if (!this.activo()) return;
-    // Si llega un cambio mientras corre, se anota para repetir al terminar:
-    // antes ese cambio se descartaba y esperaba a la próxima vez.
-    if (this.corriendo){ this.repetir = true; return; }
+    /* Si una corrida quedó colgada más de dos minutos, se la da por perdida y
+       se deja pasar la nueva: si no, un cuelgue dejaba la app sin sincronizar
+       hasta cerrarla, y el botón manual tampoco respondía. */
+    if (this.corriendo && Date.now() - (this.desde||0) < 120000){ this.repetir = true; return; }
     if (!navigator.onLine){ this.marcar("error", "sin conexión"); return; }
-    this.corriendo = true;
+    this.corriendo = true; this.desde = Date.now();
     this.marcar("trabajando");
     try{
       await this.pedirToken(interactivo, forzarConsentimiento);
@@ -911,10 +935,10 @@ const Salas = {
 
   async correr(interactivo){
     if (!this.activo()) return;
-    if (this.corriendo){ this.repetir = true; return; }
+    if (this.corriendo && Date.now() - (this.desde||0) < 120000){ this.repetir = true; return; }
     if (!navigator.onLine) return;
     if (interactivo) this.fallos = 0;
-    this.corriendo = true;
+    this.corriendo = true; this.desde = Date.now();
     try{
       await Sync.pedirToken(interactivo);
       let filas;
@@ -2097,6 +2121,8 @@ function vistaMes(){
 
 const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
   (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const instalada = () => (window.matchMedia && matchMedia("(display-mode: standalone)").matches) ||
+  navigator.standalone === true;
 
 async function bajar(texto, nombre, tipo){
   const blob = new Blob([texto], {type: tipo+";charset=utf-8"});
@@ -2182,7 +2208,8 @@ function diagnostico(){
   L.push("Sesión de Google: " + (Sync.token && Date.now() < Sync.expira
     ? "activa hasta las " + new Date(Sync.expira).toTimeString().slice(0,5)
     : "sin token (va a pedir la cuenta)"));
-  L.push("Drive: " + Sync.texto() + (Sync.detalle ? " · " + Sync.detalle : ""));
+  L.push("Drive: " + Sync.texto() + (Sync.detalle ? " · " + Sync.detalle : "") +
+    (Sync.corriendo ? " (corriendo hace " + Math.round((Date.now()-(Sync.desde||Date.now()))/1000) + " s)" : ""));
   L.push("Planilla: " + (Salas.detalle || (Salas.ultima ? "al día" : "sin sincronizar")));
   L.push("Datos: " + db.pacientes.length + " pacientes, " + db.consultas.length + " consultas");
   L.push("Navegador: " + ua.slice(0,110));
@@ -2342,6 +2369,7 @@ function vistaAjustes(){
   $("#aSinc").onclick = ()=>{
     if (!db.config.driveId){ toast("Primero cargá el ID de cliente"); return; }
     Sync.fallos = 0; Salas.fallos = 0; Sync.silencioUsado = false;
+    Sync.corriendo = false; Salas.corriendo = false;   // por si quedó algo colgado
     Sync.correr(true)
       .then(()=> db.config.hojaId ? Salas.correr(false) : null)
       .then(()=> vistaAjustes());
@@ -2441,7 +2469,12 @@ function vistaAjustes(){
   // Tocar el estado del encabezado reconecta (el toque es lo que
   // permite abrir la ventana de Google en Safari) o lleva a Ajustes.
   $("#sincEstado").addEventListener("click", ()=>{
-    if (Sync.activo()){ Sync.correr(true); return; }
+    if (Sync.activo()){
+      Sync.corriendo = false; Salas.corriendo = false;   // destraba si quedó colgado
+      Sync.fallos = 0; Salas.fallos = 0; Sync.silencioUsado = false;
+      Sync.correr(true).then(()=> db.config.hojaId ? Salas.correr(false) : null);
+      return;
+    }
     irA("ajustes"); window.scrollTo(0,0); render();
   });
 

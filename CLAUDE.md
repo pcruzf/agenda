@@ -218,6 +218,18 @@ un token válido, se reintentaba cada 5 s, indefinidamente. **Reglas actuales:**
 - `fallos >= 3` corta los reintentos automáticos; solo un toque del usuario los
   reanuda (`Sync.fallos = 0`).
 - `silencioUsado` permite **un solo** intento silencioso de token por carga.
+- **`pedirToken` tiene plazo máximo** (12 s silencioso, 90 s interactivo). GIS
+  puede no llamar a `callback` **ni** a `error_callback` —pasa en las apps
+  instaladas en iPhone—, y sin plazo la promesa quedaba colgada para siempre:
+  `corriendo` no se liberaba, el estado quedaba en "sincronizando…" y hasta el
+  botón manual dejaba de responder. **No quitar el plazo.** Ojo al escribirlo:
+  el temporizador debe llamar al `reject` original, no a un envoltorio que
+  chequee la misma bandera que él acaba de marcar.
+- **En iPhone con la app instalada no se intenta el pedido silencioso**: no
+  puede funcionar (sin cookies de terceros) y es donde se colgaba. Se pide el
+  toque directamente.
+- `corriendo` se ignora si lleva más de 2 min: red de seguridad por si algo se
+  cuelga igual. El botón manual y el estado del encabezado lo fuerzan a `false`.
 - **El token se guarda en `sessionStorage`** (`guardarToken` / `recuperarToken`
   / `olvidarToken`). Ir al horario general es una navegación real: `index.html`
   se descarga y al volver se carga de cero, y sin esto se perdía el token en
