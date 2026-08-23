@@ -1,0 +1,2729 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B3D33">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PRUEBA">
+<title>PRUEBA · Agenda de consultorio</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root{
+  --pine:#0B3D33;
+  --pine-soft:#12574A;
+  --ochre:#C98A17;
+  --paper:#E9EDEA;
+  --surface:#FFFFFF;
+  --ink:#16211F;
+  --ink-soft:#5C6B67;
+  --line:#D3DBD7;
+  --ok:#1F7A5C;
+  --ok-bg:#E2F1EA;
+  --no:#B4462F;
+  --no-bg:#F8E5E0;
+  --wait-bg:#F1EADA;
+  --radius:14px;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --serif:Georgia,"Noto Serif","Times New Roman",serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--sans);
+  background:var(--paper);
+  color:var(--ink);
+  font-size:16px;
+  line-height:1.45;
+  padding-bottom:calc(78px + env(safe-area-inset-bottom));
+  overscroll-behavior-y:contain;
+}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+/* ---------- encabezado ---------- */
+header{
+  background:var(--pine);
+  color:#fff;
+  padding:calc(14px + env(safe-area-inset-top)) 18px 14px;
+  position:sticky;top:0;z-index:30;
+}
+header h1{
+  font-family:var(--serif);
+  font-size:21px;font-weight:600;letter-spacing:-.2px;margin:0;
+}
+header .fecha{
+  margin-top:2px;font-size:13px;color:#A9C6BE;text-transform:lowercase;
+}
+.sincBtn{
+  background:none;border:0;color:#A9C6BE;font-family:inherit;font-size:13px;
+  padding:2px 0;cursor:pointer;text-transform:lowercase;
+}
+.sincBtn.avisa{color:var(--ochre);font-weight:600;text-decoration:underline}
+main{padding:14px 14px 24px;max-width:640px;margin:0 auto}
+h2.titulo{
+  font-family:var(--serif);font-size:19px;font-weight:600;margin:2px 0 12px;
+}
+.sub{font-size:13px;color:var(--ink-soft);margin:-8px 0 14px}
+
+/* ---------- filtros ---------- */
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{
+  flex:0 0 auto;border:1px solid var(--line);background:var(--surface);
+  color:var(--ink-soft);border-radius:999px;padding:7px 14px;font-size:14px;
+  font-family:inherit;cursor:pointer;
+}
+.chip[aria-pressed="true"]{background:var(--pine);border-color:var(--pine);color:#fff}
+
+/* ---------- tarjeta de consulta: el riel horario ---------- */
+.cita{
+  display:flex;background:var(--surface);border-radius:var(--radius);
+  margin-bottom:10px;overflow:hidden;box-shadow:0 1px 2px rgba(11,61,51,.07);
+}
+.riel{
+  flex:0 0 62px;background:#F4F7F5;border-right:1px solid var(--line);
+  padding:12px 6px;text-align:center;
+}
+.riel .hora{font-size:17px;font-weight:600;letter-spacing:-.3px}
+.riel .dia{font-size:11px;color:var(--ink-soft);margin-top:2px;text-transform:uppercase;letter-spacing:.4px}
+.cita.hecha .riel{background:var(--ok-bg)}
+.cita.falto .riel{background:var(--no-bg)}
+.cuerpo{flex:1;padding:11px 12px;min-width:0}
+.fila1{display:flex;align-items:flex-start;gap:8px}
+.nombre{font-weight:600;font-size:16px;flex:1;word-break:break-word}
+.menu{
+  background:none;border:0;color:var(--ink-soft);font-size:20px;line-height:1;
+  padding:2px 4px;cursor:pointer;font-family:inherit;
+}
+.notas{font-size:13px;color:var(--ink-soft);margin-top:2px;word-break:break-word}
+.acciones{display:flex;gap:6px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.estado{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.estado button{
+  border:0;background:var(--surface);font-family:inherit;font-size:13px;
+  padding:7px 10px;color:var(--ink-soft);cursor:pointer;border-right:1px solid var(--line);
+}
+.estado button:last-child{border-right:0}
+.estado button[aria-pressed="true"]{font-weight:600}
+.estado button.e-pend[aria-pressed="true"]{background:var(--wait-bg);color:#8A6A16}
+.estado button.e-ok[aria-pressed="true"]{background:var(--ok-bg);color:var(--ok)}
+.estado button.e-no[aria-pressed="true"]{background:var(--no-bg);color:var(--no)}
+.wa{
+  margin-left:auto;display:inline-flex;align-items:center;gap:6px;
+  background:var(--pine);color:#fff;text-decoration:none;border-radius:9px;
+  padding:8px 12px;font-size:13px;font-weight:600;
+}
+.wa.enviado{background:#EDF1EE;color:var(--pine);border:1px solid var(--line)}
+.wa svg{width:15px;height:15px;fill:currentColor}
+
+/* ---------- listas ---------- */
+.item{
+  display:flex;align-items:center;gap:12px;background:var(--surface);
+  border-radius:var(--radius);padding:13px 14px;margin-bottom:9px;
+  box-shadow:0 1px 2px rgba(11,61,51,.07);cursor:pointer;
+}
+.avatar{
+  flex:0 0 40px;height:40px;border-radius:50%;background:#E4EBE7;color:var(--pine);
+  display:grid;place-items:center;font-family:var(--serif);font-size:16px;font-weight:600;
+}
+.item .txt{flex:1;min-width:0}
+.item .txt b{display:block;font-size:16px;font-weight:600}
+.item .txt span{font-size:13px;color:var(--ink-soft)}
+.cuenta{text-align:right;font-size:12px;color:var(--ink-soft);line-height:1.25}
+.cuenta b{display:block;font-size:19px;color:var(--pine);font-weight:600}
+
+/* ---------- cierre de mes ---------- */
+.hoja{background:var(--surface);border-radius:var(--radius);padding:16px 14px;box-shadow:0 1px 2px rgba(11,61,51,.07)}
+.hoja h3{font-family:var(--serif);font-size:17px;margin:0 0 2px;font-weight:600}
+.hoja .periodo{font-size:13px;color:var(--ink-soft);margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{
+  text-align:right;font-size:11px;text-transform:uppercase;letter-spacing:.6px;
+  color:var(--ink-soft);font-weight:600;padding:0 0 7px;border-bottom:1px solid var(--ink);
+}
+th:first-child{text-align:left}
+td{padding:9px 0;border-bottom:1px solid var(--line);text-align:right}
+td:first-child{text-align:left;font-weight:500}
+tfoot td{border-bottom:0;border-top:2px solid var(--ink);font-weight:600;padding-top:10px}
+.tot{display:flex;gap:10px;margin:14px 0}
+.tot div{
+  flex:1;background:var(--surface);border-radius:var(--radius);padding:12px;
+  box-shadow:0 1px 2px rgba(11,61,51,.07);
+}
+.tot b{display:block;font-size:26px;font-weight:600;letter-spacing:-.5px}
+.tot span{font-size:12px;color:var(--ink-soft)}
+
+/* ---------- botones ---------- */
+.btn{
+  display:block;width:100%;border:0;border-radius:11px;padding:14px;
+  font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;
+  background:var(--pine);color:#fff;margin-top:10px;text-align:center;text-decoration:none;
+}
+.btn.sec{background:var(--surface);color:var(--pine);border:1px solid var(--line)}
+.btn.peligro{background:var(--surface);color:var(--no);border:1px solid #E5C6BE}
+.fab{
+  position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom));
+  width:56px;height:56px;border-radius:50%;background:var(--ochre);color:#231A05;
+  border:0;font-size:28px;line-height:1;box-shadow:0 6px 16px rgba(11,61,51,.28);
+  z-index:35;cursor:pointer;font-family:inherit;
+}
+
+/* ---------- navegación inferior ---------- */
+nav{
+  position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--surface);
+  border-top:1px solid var(--line);display:flex;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+nav button{
+  flex:1;background:none;border:0;padding:9px 2px 10px;font-family:inherit;
+  font-size:11px;color:var(--ink-soft);cursor:pointer;
+}
+nav button svg, nav .navLink svg{display:block;margin:0 auto 3px;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+nav .navLink{
+  flex:1;padding:9px 2px 10px;font-size:11px;color:var(--ink-soft);
+  text-align:center;text-decoration:none;font-family:inherit;
+}
+nav .navLink .largo{display:none}
+nav button[aria-current="page"]{color:var(--pine);font-weight:600}
+
+.marca{
+  display:inline-block;background:#EDF1EE;color:var(--ink-soft);border-radius:5px;
+  padding:1px 6px;font-size:11px;margin-left:6px;vertical-align:1px;font-weight:600;
+}
+.cita.anulada .riel{background:#F0F2F1}
+.cita.anulada .nombre{text-decoration:line-through;color:var(--ink-soft)}
+.anulRow{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:13px;color:var(--ink-soft)}
+.anulRow button{
+  margin-left:auto;border:1px solid var(--line);background:var(--surface);color:var(--pine);
+  border-radius:9px;padding:7px 12px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;
+}
+.plata{white-space:nowrap}
+.atajos{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.atajos button{
+  border:1px solid var(--line);background:var(--surface);color:var(--pine);border-radius:999px;
+  padding:7px 13px;font-family:inherit;font-size:13px;cursor:pointer;font-weight:600;
+}
+.exito{
+  background:var(--ok-bg);border-left:3px solid var(--ok);padding:11px 12px;
+  border-radius:0 10px 10px 0;font-size:14px;margin-bottom:14px;line-height:1.5;
+}
+
+/* ---------- vista de día: la grilla horaria ---------- */
+.diaNav{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.diaNav button{
+  flex:0 0 auto;width:42px;height:42px;border:1px solid var(--line);background:var(--surface);
+  border-radius:11px;font-size:19px;color:var(--pine);cursor:pointer;font-family:inherit;line-height:1;
+}
+.diaNav .rot{
+  flex:1;text-align:center;font-family:var(--serif);font-size:17px;font-weight:600;
+  background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:9px 4px;
+  cursor:pointer;position:relative;overflow:hidden;
+}
+.diaNav .rot input{position:absolute;inset:0;opacity:0;width:100%;height:100%;padding:0;border:0}
+.resumen{
+  display:flex;justify-content:space-between;gap:10px;font-size:13px;color:var(--ink-soft);
+  padding:0 4px 10px;
+}
+.resumen b{color:var(--pine);font-weight:600}
+.grilla{background:var(--surface);border-radius:var(--radius);overflow:hidden;box-shadow:0 1px 2px rgba(11,61,51,.07)}
+.slot{display:flex;border-bottom:1px solid var(--line);min-height:46px}
+.slot:last-child{border-bottom:0}
+.slot .h{
+  flex:0 0 58px;padding:9px 4px;font-size:13px;color:var(--ink-soft);text-align:center;
+  border-right:1px solid var(--line);background:#F4F7F5;
+}
+.slot.enPunto .h{color:var(--ink);font-weight:600}
+.slot .z{flex:1;padding:9px 12px;display:flex;align-items:center;gap:8px;border-left:3px solid transparent;min-width:0}
+.slot.libre{cursor:pointer}
+.slot.libre .z{color:#93A19D;font-size:14px}
+.slot.libre .z .mas{margin-left:auto;color:var(--pine);font-weight:600;font-size:20px;line-height:1}
+.slot.libre:active{background:#F4F7F5}
+.slot.ocupado .z{flex-direction:column;align-items:flex-start;gap:1px;cursor:pointer;justify-content:center}
+.slot.ocupado .z b{font-size:15px;font-weight:600;width:100%;word-break:break-word}
+.slot.ocupado .z span{font-size:12px;color:var(--ink-soft)}
+.slot.ocupado.pendiente .z{border-left-color:var(--ochre);background:#FCFAF4}
+.slot.ocupado.asistio .z{border-left-color:var(--ok);background:#F5FAF7}
+.slot.ocupado.falto .z{border-left-color:var(--no);background:#FDF7F5}
+.slot.sigue .z{border-left-width:3px;border-left-style:solid;background:#F7F9F8}
+.slot.sigue.pendiente .z{border-left-color:var(--ochre)}
+.slot.sigue.asistio .z{border-left-color:var(--ok)}
+.slot.sigue.falto .z{border-left-color:var(--no)}
+.ocupadas{font-size:13px;color:var(--ink-soft);background:#F4F7F5;border-radius:10px;padding:9px 11px;margin-top:8px;line-height:1.5}
+.ocupadas b{color:var(--ink);font-weight:600}
+
+/* ---------- cartel de la versión de prueba ---------- */
+.cartelPrueba{
+  background:#8A3D12;color:#fff;text-align:center;font-size:11.5px;font-weight:600;
+  letter-spacing:.5px;text-transform:uppercase;padding:6px 10px;
+  padding-top:calc(6px + env(safe-area-inset-top));position:relative;z-index:60;
+}
+body.esPrueba header{padding-top:14px}
+@media (min-width:900px){ body.esPrueba{padding-left:0} }
+
+/* ---------- calendario propio: semana y mes ---------- */
+.kModo{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:12px}
+.kModo button{
+  flex:1;border:0;border-right:1px solid var(--line);background:var(--surface);
+  font-family:inherit;font-size:14px;padding:9px 4px;color:var(--ink-soft);cursor:pointer;
+}
+.kModo button:last-child{border-right:0}
+.kModo button[aria-pressed="true"]{background:var(--pine);color:#fff;font-weight:600}
+
+.kMarco{background:var(--surface);border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(11,61,51,.07)}
+.kScroll{overflow-x:auto;scrollbar-width:thin}
+.kRej{min-width:calc(44px + var(--kcols) * 92px)}
+.kEnc{display:grid;grid-template-columns:44px repeat(var(--kcols),1fr);border-bottom:1px solid var(--line)}
+.kEnc .kEsq{border-right:1px solid var(--line);background:#F4F7F5}
+.kEnc .kD{
+  text-align:center;padding:6px 2px 7px;border-right:1px solid var(--hair);
+  background:#F4F7F5;cursor:pointer;
+}
+.kEnc .kD:last-child{border-right:0}
+.kEnc .kD .kSem{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-soft)}
+.kEnc .kD .kFec{font-size:15px;font-weight:600;letter-spacing:-.3px}
+.kEnc .kD.kHoy{background:#FBF3E0}
+.kEnc .kD.kHoy .kFec{color:#8A6A16}
+.kEnc .kD.kFinde .kSem, .kEnc .kD.kFinde .kFec{color:#9AA8A4}
+.kCuerpo{display:grid;grid-template-columns:44px repeat(var(--kcols),1fr)}
+.kHoras{border-right:1px solid var(--line);background:#F4F7F5}
+.kHoras div{
+  height:calc(var(--kfila) * 2);font-size:10.5px;color:var(--ink-soft);
+  text-align:right;padding:2px 5px 0 0;border-bottom:1px solid var(--hair);
+}
+.kCol{
+  position:relative;border-right:1px solid var(--hair);
+  background:repeating-linear-gradient(to bottom, transparent 0,
+    transparent calc(var(--kfila) * 2 - 1px),
+    var(--hair) calc(var(--kfila) * 2 - 1px), var(--hair) calc(var(--kfila) * 2));
+}
+.kCol:last-child{border-right:0}
+.kCol.kFinde{background-color:#FAFBFB}
+.kCol.kHoy{background-color:#FEFCF6}
+.kB{
+  position:absolute;left:2px;right:2px;border-radius:5px;padding:2px 5px;
+  overflow:hidden;font-size:11px;line-height:1.2;cursor:pointer;
+}
+.kB b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kB span{font-size:10px;color:var(--ink-soft)}
+.kB.s-naranja{background:#FBF0E2;box-shadow:inset 3px 0 0 #C96A17}
+.kB.s-azul{background:#E7EEF7;box-shadow:inset 3px 0 0 #2A6099}
+.kB.asistio{box-shadow:inset 3px 0 0 var(--ok)}
+.kB.falto{box-shadow:inset 3px 0 0 var(--no)}
+.kB.cancelada{opacity:.5}
+.kB.cancelada b{text-decoration:line-through}
+
+.kMes{background:var(--surface);border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(11,61,51,.07)}
+.kMesCab{display:grid;grid-template-columns:repeat(7,1fr);background:#F4F7F5;border-bottom:1px solid var(--line)}
+.kMesCab div{
+  text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:.6px;
+  color:var(--ink-soft);padding:7px 1px;font-weight:600;
+}
+.kMesRej{display:grid;grid-template-columns:repeat(7,1fr)}
+.kCel{
+  min-height:84px;border-right:1px solid var(--hair);border-bottom:1px solid var(--hair);
+  padding:5px 5px 7px;cursor:pointer;
+}
+.kCel:nth-child(7n){border-right:0}
+.kCel.kFuera{background:#FAFBFB}
+.kCel.kFuera .kN{color:#BAC5C1}
+.kCel.kHoy{background:#FEFCF6}
+.kCel .kN{font-size:12.5px;font-weight:600;color:var(--ink-soft)}
+.kCel.kHoy .kN{color:#8A6A16}
+.kEv{
+  font-size:10px;border-radius:3px;padding:1px 4px;margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.kEv.s-naranja{background:#FBF0E2;color:#8A5410}
+.kEv.s-azul{background:#E7EEF7;color:#24507F}
+.kEv.cancelada{opacity:.5;text-decoration:line-through}
+.kMas{font-size:9.5px;color:var(--ink-soft);padding-left:2px;margin-top:1px}
+@media (max-width:640px){
+  .kCel{min-height:64px;padding:3px 3px 5px}
+  .kEv{font-size:9px;padding:1px 3px}
+}
+
+/* ---------- grilla de dos salas ---------- */
+.cabSalas{display:flex;border-bottom:1px solid var(--line);background:#F4F7F5}
+.cabSalas .h{flex:0 0 52px;border-right:1px solid var(--line)}
+.cabSalas .cab{
+  flex:1;text-align:center;font-size:12px;font-weight:600;padding:8px 4px;
+  text-transform:uppercase;letter-spacing:.5px;border-right:1px solid var(--line);
+}
+.cabSalas .cab:last-child{border-right:0}
+.cab.s-naranja{color:#A75A10;background:#FBF0E2}
+.cab.s-azul{color:#24507F;background:#E7EEF7}
+.slot2{display:flex;border-bottom:1px solid var(--line);min-height:44px}
+.slot2:last-child{border-bottom:0}
+.slot2 .h{
+  flex:0 0 52px;padding:8px 2px;font-size:12px;color:var(--ink-soft);text-align:center;
+  border-right:1px solid var(--line);background:#F4F7F5;
+}
+.slot2.enPunto .h{color:var(--ink);font-weight:600}
+.cel{
+  flex:1;min-width:0;border-right:1px solid var(--line);padding:5px 7px;
+  display:flex;flex-direction:column;justify-content:center;gap:1px;
+}
+.cel:last-child{border-right:0}
+.cel.libre{cursor:pointer;align-items:center;justify-content:center}
+.cel.libre .mas{color:#B7C2BE;font-size:17px;line-height:1;font-weight:600}
+.cel.libre:active{background:#F4F7F5}
+.cel.ocupada{cursor:default}
+.cel.propia{cursor:pointer}
+.cel.ocupada b{font-size:13px;font-weight:600;line-height:1.2;word-break:break-word}
+.cel.ocupada span.num{font-size:11px;color:var(--ink-soft)}
+.cel.ocupada .cont{color:#B7C2BE;font-size:13px;text-align:center}
+.cel.s-naranja{background:#FBF0E2;box-shadow:inset 3px 0 0 #C96A17}
+.cel.s-azul{background:#E7EEF7;box-shadow:inset 3px 0 0 #2A6099}
+.cel.ajena{opacity:.72}
+.cel.ajena b{font-weight:500;font-style:italic}
+.cel.asistio{box-shadow:inset 3px 0 0 var(--ok)}
+.cel.falto{box-shadow:inset 3px 0 0 var(--no)}
+.chipSala{
+  display:inline-block;border-radius:5px;padding:1px 7px;font-size:11px;
+  font-weight:600;margin-left:6px;vertical-align:1px;
+}
+.chipSala.s-naranja{background:#FBF0E2;color:#A75A10}
+.chipSala.s-azul{background:#E7EEF7;color:#24507F}
+.diag{
+  background:#F4F7F5;border:1px solid var(--line);border-radius:10px;padding:11px 12px;
+  font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11.5px;line-height:1.55;
+  white-space:pre-wrap;word-break:break-word;color:var(--ink-soft);margin-bottom:10px;
+}
+
+.listaSel{
+  background:var(--surface);border:1px solid var(--line);border-radius:10px;
+  max-height:270px;overflow-y:auto;padding:2px 0;
+}
+.linea{
+  display:flex;align-items:center;gap:9px;padding:9px 12px;
+  border-bottom:1px solid var(--line);font-size:14px;cursor:pointer;margin:0;
+}
+.linea:last-child{border-bottom:0}
+.linea input{width:19px;height:19px;flex:0 0 auto;margin:0}
+.linea .dd{color:var(--ink-soft);font-size:12px;text-transform:uppercase;width:26px}
+.linea .hh{font-weight:600}
+.linea .sl{margin-left:auto;font-size:11px;color:var(--ink-soft)}
+.btn.apagado{opacity:.45;pointer-events:none}
+tr.clicable{cursor:pointer}
+tr.clicable:active td{background:#F4F7F5}
+.fichaLinea{
+  display:flex;align-items:center;gap:11px;width:100%;background:none;border:0;
+  border-bottom:1px solid var(--line);padding:11px 12px;font-family:inherit;
+  text-align:left;cursor:pointer;color:var(--ink);
+}
+.fichaLinea:last-child{border-bottom:0}
+.fichaLinea:active{background:#F4F7F5}
+.fichaLinea .ini{
+  flex:0 0 34px;height:34px;border-radius:50%;background:#E4EBE7;color:var(--pine);
+  display:grid;place-items:center;font-family:var(--serif);font-size:13px;font-weight:600;
+}
+.fichaLinea.hecho .ini{background:var(--ok-bg);color:var(--ok)}
+.fichaLinea .txt{flex:1;min-width:0}
+.fichaLinea .txt b{display:block;font-size:15px;font-weight:600}
+.fichaLinea .txt span{font-size:12px;color:var(--ink-soft)}
+.fichaLinea .der{text-align:right;font-size:11px;color:var(--ink-soft);line-height:1.3}
+.fichaLinea .der b{display:block;font-size:15px;color:var(--pine);font-weight:600}
+.fichaLinea.hecho .der span{color:var(--ok);font-weight:600}
+.previo{
+  background:var(--surface);border:1px solid var(--line);border-radius:10px;
+  padding:12px 13px;font-size:14px;line-height:1.55;white-space:pre-wrap;
+  word-break:break-word;margin-top:5px;
+}
+
+/* ---------- hoja modal ---------- */
+.velo{
+  position:fixed;inset:0;background:rgba(15,32,28,.45);z-index:50;
+  display:flex;align-items:flex-end;justify-content:center;
+}
+.velo[hidden]{display:none}
+.hojaModal{
+  background:var(--paper);width:100%;max-width:640px;
+  border-radius:20px 20px 0 0;padding:18px 16px calc(20px + env(safe-area-inset-bottom));
+  max-height:92vh;overflow-y:auto;animation:subir .22s ease-out;
+}
+@keyframes subir{from{transform:translateY(30px);opacity:.6}to{transform:none;opacity:1}}
+.hojaModal h3{font-family:var(--serif);font-size:19px;margin:0 0 14px;font-weight:600}
+label{display:block;font-size:13px;color:var(--ink-soft);margin:12px 0 5px;font-weight:600}
+input,select,textarea{
+  width:100%;font-family:inherit;font-size:16px;padding:12px;
+  border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);
+}
+textarea{min-height:76px;resize:vertical}
+input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{
+  outline:2px solid var(--ochre);outline-offset:1px;
+}
+.dosCol{display:flex;gap:10px}
+.dosCol>div{flex:1}
+.check{display:flex;align-items:center;gap:9px;margin-top:14px;font-size:14px}
+.check input{width:20px;height:20px;flex:0 0 auto}
+.hist{background:var(--surface);border-radius:10px;padding:4px 12px;margin-top:8px;max-height:210px;overflow-y:auto}
+.hist div{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.hist div:last-child{border-bottom:0}
+.vacio{text-align:center;color:var(--ink-soft);font-size:14px;padding:34px 20px;line-height:1.6}
+.vacio b{display:block;font-family:var(--serif);font-size:17px;color:var(--ink);margin-bottom:5px;font-weight:600}
+.aviso{background:#FBF3E0;border-left:3px solid var(--ochre);padding:11px 12px;border-radius:0 10px 10px 0;font-size:13px;margin-bottom:14px;line-height:1.5}
+.toast{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom));
+  background:var(--ink);color:#fff;padding:11px 18px;border-radius:999px;font-size:14px;z-index:60;
+}
+.toast[hidden]{display:none}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---------- pantalla grande: la navegación pasa a un costado ---------- */
+@media (min-width:900px){
+  /* En pantalla grande la navegación pasa arriba, pegada al encabezado.
+     Se reordena el flujo con flex porque en el HTML <nav> viene después de
+     <main> (para que en el celular quede abajo, donde llega el pulgar). */
+  body{display:flex;flex-direction:column;padding-left:0;padding-bottom:40px}
+  /* El encabezado se desplaza y la barra queda fija arriba: así no hay que
+     adivinar la altura del encabezado para posicionar la barra. */
+  header{order:1;position:static;padding:18px 28px 14px}
+  header h1{font-size:24px}
+  nav{order:2;position:sticky;top:0;bottom:auto;border-top:0;border-bottom:1px solid var(--line)}
+  main{order:3;padding:26px 28px 40px;max-width:860px;margin:0 auto;width:100%}
+
+  nav{
+    justify-content:flex-start;gap:2px;
+    /* El primer botón se alinea con el borde del contenido, que está centrado
+       en 860px; si no, la barra queda flotando a la izquierda. */
+    padding:0 20px 0 calc(max(0px, (100% - 860px) / 2) + 12px);
+    background:var(--surface);box-shadow:0 1px 3px rgba(11,61,51,.06);
+  }
+  nav button, nav .navLink{
+    flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;
+    padding:14px 16px;font-size:14.5px;border-radius:0;position:relative;
+  }
+  nav button svg, nav .navLink svg{margin:0;width:19px;height:19px}
+  nav .navLink .corto{display:none}
+  nav .navLink .largo{display:inline}
+  nav button[aria-current="page"]{color:var(--pine);background:none}
+  nav button[aria-current="page"]::after{
+    content:"";position:absolute;left:14px;right:14px;bottom:0;height:3px;
+    background:var(--pine);border-radius:2px 2px 0 0;
+  }
+  nav button:hover, nav .navLink:hover{color:var(--pine);background:#F4F7F5}
+
+  .fab{bottom:32px;right:32px;width:60px;height:60px;font-size:30px}
+  .velo{align-items:center}
+  .hojaModal{border-radius:16px;max-width:560px;max-height:86vh}
+  .cita{margin-bottom:12px}
+  .slot{min-height:50px}
+  .tot div{padding:16px}
+}
+</style>
+</head>
+<body class="esPrueba">
+
+<div class="cartelPrueba">VERSIÓN DE PRUEBA · los datos no son los reales</div>
+
+<header>
+  <h1>Agenda · prueba</h1>
+  <div class="fecha"><span id="hoyTexto"></span> · <button id="sincEstado" class="sincBtn">solo en este equipo</button></div>
+</header>
+
+<main id="vista"></main>
+
+<button class="fab" id="fab" aria-label="Agendar consulta">+</button>
+
+<nav>
+  <button data-tab="agenda" aria-current="page">
+    <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>Agenda</button>
+  <button data-tab="dia">
+    <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18M8 15h3M8 18h3"/></svg>Calendario</button>
+  <a class="navLink" href="tablero.html">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11M15 9v11"/></svg><span class="corto">Horario</span><span class="largo">Horario general</span></a>
+  <button data-tab="pacientes">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.6 3.1-5.5 7-5.5s7 1.9 7 5.5"/></svg>Pacientes</button>
+  <button data-tab="mes">
+    <svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>Mes</button>
+  <button data-tab="ajustes">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></svg>Ajustes</button>
+</nav>
+
+<div class="velo" id="velo" hidden><div class="hojaModal" id="hojaModal"></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+"use strict";
+
+/* ==========================================================================
+   CONFIGURACIÓN DEL CONSULTORIO — completar una sola vez, antes de subir
+   el archivo a GitHub. Así ninguna psicóloga tiene que pegar códigos a mano
+   (pegarlos por mensaje es la causa más común de "Error 401: invalid_client",
+   porque el texto llega cortado).
+   ========================================================================== */
+const CONSULTORIO = {
+  clienteId: "502751961059-7f8nr0fsnbfgccvae0td1qshs0dihkle.apps.googleusercontent.com",
+  /* VACÍO A PROPÓSITO: sin planilla, la versión de prueba no publica reservas
+     que verían las demás psicólogas. Si querés probar el consultorio
+     compartido, creá una planilla aparte y pegá su ID acá — nunca la real. */
+  hojaId:    "",
+
+  /* Identificadores de quienes administran el cobro de las salas. Solo a ellas
+     les aparece el módulo de alquiler; a las inquilinas no se les dibuja nada.
+     Cada una encuentra el suyo en Ajustes → Diagnóstico ("Tu identificador").
+     Ojo: esto oculta la pantalla, no el código: index.html es público. Lo que
+     sí queda privado son los precios, que viven en el Drive de cada una. */
+  administradoras: ["ms9os1woexlkfms9os1woao31h"]
+};
+
+/* Solo quien administra ve el módulo de alquiler de salas. */
+function esAdministradora(){
+  const lista = CONSULTORIO.administradoras || [];
+  return !!db.config.profId && lista.indexOf(db.config.profId) >= 0;
+}
+
+/* ============ almacenamiento ============ */
+const CLAVE = "agenda_consultorio_PRUEBA";
+const Store = {
+  async cargar(){
+    if (window.storage && window.storage.get){
+      try{ const r = await window.storage.get(CLAVE); if (r && r.value) return JSON.parse(r.value); }catch(e){}
+    }
+    try{ const raw = localStorage.getItem(CLAVE); if (raw) return JSON.parse(raw); }catch(e){}
+    return null;
+  },
+  async guardar(d){
+    const s = JSON.stringify(d);
+    if (window.storage && window.storage.set){
+      try{ await window.storage.set(CLAVE, s); return true; }catch(e){}
+    }
+    try{ localStorage.setItem(CLAVE, s); return true; }catch(e){ return false; }
+  }
+};
+
+let db = { pacientes:[], consultas:[], config:{}, borrados:{}, configMod:0, avisos:{} };
+
+/* Reservas de las demás psicólogas: se leen de la planilla compartida y son
+   de solo lectura. Nunca traen datos de pacientes. */
+let ajenas = [];
+
+/* Cada registro lleva su propia marca de tiempo para poder combinar
+   los cambios de varios dispositivos sin pisar nada. */
+function sello(o){ if (o) o.mod = Date.now(); return o; }
+function tumba(id){ if (id) db.borrados[id] = Date.now(); }
+function selloConfig(){ db.configMod = Date.now(); }
+const CONFIG_DEF = {
+  codigoPais: "598",
+  plantilla: "Hola {nombre}, te recuerdo tu consulta del {dia} {fecha} a las {hora}. Si no podés venir, avisame y la reprogramamos. ¡Gracias!",
+  horaInicio: "08:00",
+  horaFin: "20:00",
+  paso: 30,
+  duracion: 60,
+  moneda: "$",
+  cobrarFaltas: false,
+  driveId: "",
+  hojaId: "",
+  profNombre: "",
+  profId: "",
+  salaDef: "naranja",
+  plantillaCambio: "Hola {nombre}, cambiamos tu consulta para el {dia} {fecha} a las {hora}. Cualquier cosa avisame. ¡Gracias!",
+  plantillaCierre: "Hola {nombre}, te paso el resumen de {mes}: {cantidad} consultas ({detalle}). Total: {total}. Cualquier duda avisame. ¡Gracias!",
+  /* Precio por hora que se le cobra a cada inquilina, por profId:
+     { "<profId>": { nombre: "...", precio: 1200 } }. Vive solo en el Drive
+     de quien administra el cobro; ninguna otra psicóloga lo ve. */
+  alquiler: {}
+};
+
+const SALAS = [
+  { id:"naranja", nombre:"Naranja", color:"#C96A17", suave:"#FBF0E2" },
+  { id:"azul",    nombre:"Azul",    color:"#2A6099", suave:"#E7EEF7" }
+];
+const salaDe = id => SALAS.find(s=>s.id===id) || SALAS[0];
+
+/* Detecta los pegados incompletos, que son la causa habitual del
+   "Error 401: invalid_client" de Google. */
+function revisarClienteId(v){
+  v = String(v||"").trim();
+  if (!v) return "Falta el ID de cliente.";
+  if (/\s/.test(v)) return "El ID tiene espacios o saltos de línea: se pegó mal.";
+  if (!/\.apps\.googleusercontent\.com$/.test(v))
+    return "El ID tiene que terminar en .apps.googleusercontent.com — parece que quedó cortado.";
+  if (!/^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/i.test(v))
+    return "El ID no tiene el formato esperado (números, guion, letras y el final .apps.googleusercontent.com).";
+  if (v.length < 50) return "El ID quedó demasiado corto: probablemente se cortó al copiarlo.";
+  return "";
+}
+
+function revisarHojaId(v){
+  v = String(v||"").trim();
+  if (!v) return "";
+  if (/\s/.test(v)) return "El ID de la planilla tiene espacios: se pegó mal.";
+  if (v.length < 30) return "El ID de la planilla parece incompleto.";
+  return "";
+}
+
+/* `urgente` es para los cambios que las demás tienen que ver ya: alta, baja,
+   cancelación o cambio de horario de una consulta. Esos no esperan el respiro
+   de unos segundos, salen en el momento. Los cambios que no tocan la planilla
+   (marcar asistencia, notas, datos del paciente) siguen con espera. */
+async function persistir(urgente){
+  await Store.guardar(db);
+  if (Salas.activo()) Salas.pendiente = true;
+  if (urgente){ Sync.correr(false); Salas.correr(false); }
+  else { Sync.programar(); Salas.programar(); }
+}
+
+/* ============ sincronización con Google Drive ============ */
+const ARCHIVO = "agenda-consultorio-PRUEBA.json";
+const CLAVE_TOKEN = "agenda_sesion_google_PRUEBA";
+const ALCANCE = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets";
+
+function mezclarLista(a, b, borrados){
+  const m = new Map();
+  (a||[]).forEach(r => { if (r && r.id) m.set(r.id, r); });
+  (b||[]).forEach(r => {
+    if (!r || !r.id) return;
+    const e = m.get(r.id);
+    if (!e || (r.mod||0) > (e.mod||0)) m.set(r.id, r);
+  });
+  return [...m.values()].filter(r => !(borrados[r.id] && borrados[r.id] > (r.mod||0)));
+}
+function mezclarBorrados(a, b){
+  const o = Object.assign({}, a||{});
+  Object.keys(b||{}).forEach(k => { if (!o[k] || b[k] > o[k]) o[k] = b[k]; });
+  const corte = Date.now() - 180*24*3600*1000;   // se olvidan a los 6 meses
+  Object.keys(o).forEach(k => { if (o[k] < corte) delete o[k]; });
+  return o;
+}
+function fundir(local, remoto){
+  if (!remoto) return local;
+  const borrados = mezclarBorrados(local.borrados, remoto.borrados);
+  const localNueva = (local.configMod||0) >= (remoto.configMod||0);
+  const avisos = Object.assign({}, local.avisos||{});
+  Object.keys(remoto.avisos||{}).forEach(k=>{
+    if (!avisos[k] || remoto.avisos[k] > avisos[k]) avisos[k] = remoto.avisos[k];
+  });
+  return {
+    pacientes: mezclarLista(local.pacientes, remoto.pacientes, borrados),
+    consultas: mezclarLista(local.consultas, remoto.consultas, borrados),
+    config: Object.assign({}, CONFIG_DEF, localNueva ? remoto.config : local.config, localNueva ? local.config : remoto.config),
+    configMod: Math.max(local.configMod||0, remoto.configMod||0),
+    borrados: borrados,
+    avisos: avisos
+  };
+}
+
+const Sync = {
+  token: null, expira: 0, fileId: null, cliente: null,
+  estado: "off",          // off | listo | trabajando | error | auth
+  detalle: "", ultima: 0, timer: null, corriendo: false,
+
+  activo(){ return !!(db.config && db.config.driveId); },
+
+  marcar(estado, detalle){
+    this.estado = estado; this.detalle = detalle || "";
+    const el = document.getElementById("sincEstado");
+    if (el){
+      el.textContent = this.texto();
+      el.className = "sincBtn" + ((estado === "auth" || estado === "error") && this.activo() ? " avisa" : "");
+    }
+    const cj = document.getElementById("sincCaja");
+    if (cj) cj.innerHTML = this.cajaHTML();
+  },
+
+  texto(){
+    if (!this.activo()) return "solo en este equipo";
+    if (this.estado === "trabajando") return "sincronizando…";
+    if (Salas.pendiente && Salas.activo()) return "publicando…";
+    if (this.estado === "auth") return "falta reconectar";
+    if (this.estado === "error") return "sin sincronizar";
+    if (this.ultima){
+      const min = Math.round((Date.now()-this.ultima)/60000);
+      if (min < 1) return "al día";
+      if (min < 60) return "hace "+min+" min";
+      return "hace "+Math.round(min/60)+" h";
+    }
+    return "sin sincronizar";
+  },
+
+  cajaHTML(){
+    if (!this.activo()) return `<div class="ocupadas">Los datos están solo en este dispositivo. Configurá Google Drive para usar la agenda en el celular y en la PC.</div>`;
+    const cls = this.estado === "error" || this.estado === "auth" ? "aviso" : "ocupadas";
+    return `<div class="${cls}">Estado: <b>${esc(this.texto())}</b>${this.detalle ? " · "+esc(this.detalle) : ""}</div>`;
+  },
+
+  /* ---- token ---- */
+  /* El token vive en sessionStorage además de en memoria. Sin esto, cada ida
+     al horario general recarga index.html, se pierde el token y Google vuelve
+     a pedir la cuenta. Muere al cerrar la app; los tokens duran ~1 h igual. */
+  guardarToken(){
+    try{ sessionStorage.setItem(CLAVE_TOKEN, JSON.stringify({ t:this.token, e:this.expira })); }catch(e){}
+  },
+  recuperarToken(){
+    try{
+      const r = JSON.parse(sessionStorage.getItem(CLAVE_TOKEN) || "null");
+      if (r && r.t && Date.now() < r.e - 60000){ this.token = r.t; this.expira = r.e; }
+    }catch(e){}
+  },
+  olvidarToken(){
+    this.token = null; this.expira = 0;
+    try{ sessionStorage.removeItem(CLAVE_TOKEN); }catch(e){}
+  },
+
+  async pedirToken(interactivo, forzarConsentimiento){
+    if (!this.token) this.recuperarToken();
+    if (this.token && Date.now() < this.expira - 60000) return this.token;
+    if (location.protocol === "file:") throw new Error("Abrí la app desde una dirección https, no como archivo local.");
+    if (!window.google || !google.accounts || !google.accounts.oauth2) throw new Error("No cargó la librería de Google. Revisá la conexión.");
+
+    // Sin un toque del usuario el navegador bloquea la ventana de Google.
+    // Se permite un solo intento silencioso por carga: si falla, se espera
+    // el toque. Sin esto los reintentos automáticos quedaban en bucle.
+    /* En una app instalada en iPhone el pedido silencioso no puede funcionar
+       (Safari bloquea las cookies de terceros que Google usa) y además suele
+       quedar sin respuesta, colgando la sincronización. Se pide el toque. */
+    if (!interactivo && esIOS && instalada()){
+      const e = new Error("Tocá acá para conectar con Google");
+      e.auth = true; throw e;
+    }
+    if (!interactivo){
+      if (this.silencioUsado){
+        const e = new Error("Tocá para conectar con Google");
+        e.auth = true; throw e;
+      }
+      this.silencioUsado = true;
+    }
+
+    const self = this;
+    if (!this.cliente || this.clienteId !== db.config.driveId){
+      this.clienteId = db.config.driveId;
+      this.cliente = google.accounts.oauth2.initTokenClient({
+        client_id: db.config.driveId, scope: ALCANCE, callback: ()=>{}
+      });
+    }
+    return new Promise((resolver, rechazar)=>{
+      /* Google puede no llamar a ninguno de los dos callbacks —pasa en las apps
+         instaladas en iPhone—. Sin este plazo la promesa quedaba colgada para
+         siempre y dejaba la sincronización trabada en "sincronizando…", incluso
+         para el botón manual. */
+      let listo = false;
+      const fin = (fn, arg) => { if (listo) return; listo = true; clearTimeout(reloj); fn(arg); };
+      const reloj = setTimeout(()=>{
+        const e = new Error(interactivo
+          ? "Google no respondió. Probá de nuevo."
+          : "Tocá acá para conectar con Google");
+        e.auth = true;
+        fin(rechazar, e);
+      }, interactivo ? 90000 : 12000);
+      const ok  = v => fin(resolver, v);
+      const mal = v => fin(rechazar, v);
+
+      self.cliente.callback = r => {
+        if (r && r.access_token){
+          self.token = r.access_token;
+          self.expira = Date.now() + (Number(r.expires_in||3600)*1000);
+          self.otorgado = String(r.scope || "");
+          self.silencioUsado = false;
+          self.guardarToken();
+          if (self.otorgado && self.otorgado.indexOf("spreadsheets") < 0){
+            Salas.estado = "error";
+            Salas.detalle = "No diste el permiso de planillas: reconectá y aceptá todas las casillas";
+          }
+          ok(self.token);
+        } else {
+          const e = new Error((r && r.error_description) || "No se pudo autorizar");
+          e.auth = true; mal(e);
+        }
+      };
+      self.cliente.error_callback = e => {
+        const t = (e && e.type) || "";
+        const m = t === "popup_closed" ? "Cerraste la ventana de Google"
+                : t === "popup_failed_to_open" ? "El navegador bloqueó la ventana: tocá el botón de nuevo"
+                : "No se pudo autorizar";
+        const err = new Error(m); err.auth = true; mal(err);
+      };
+      /* "consent" reabre la pantalla de permisos completa: solo hace falta al
+         conectar por primera vez o al sumar un permiso nuevo. En los reintentos
+         normales se deja vacío, y Google la muestra solo si de verdad falta. */
+      try{ self.cliente.requestAccessToken({ prompt: forzarConsentimiento ? "consent" : "" }); }
+      catch(e){ mal(e); }
+    });
+  },
+
+  async api(url, opciones){
+    const o = Object.assign({}, opciones);
+    o.headers = Object.assign({}, o.headers, { Authorization: "Bearer " + this.token });
+    /* keepalive deja que una escritura ya lanzada termine aunque se cierre la
+       pestaña. Solo para escrituras: el límite de 64 KB no molesta acá. */
+    if (o.method && o.method !== "GET") o.keepalive = true;
+    const r = await fetch(url, o);
+    if (r.ok) return r;
+
+    let cuerpo = null;
+    try{ cuerpo = await r.json(); }catch(e){}
+    const g = (cuerpo && cuerpo.error) || {};
+    const msg = g.message || "";
+    const razon = (g.details && g.details[0] && g.details[0].reason) ||
+                  (g.errors && g.errors[0] && g.errors[0].reason) || "";
+    const err = new Error(mensajeGoogle(r.status, razon, msg));
+    err.status = r.status; err.razon = razon; err.crudo = msg;
+
+    // Solo un 401 significa que el token venció. Un 403 puede ser una API sin
+    // habilitar o un permiso que falta: borrar el token ahí provocaba un loop.
+    if (r.status === 401){ this.olvidarToken(); err.auth = true; }
+    if (r.status === 403 && /insufficient|scope/i.test(msg)){ this.olvidarToken(); err.auth = true; }
+    throw err;
+  },
+
+  async buscarArchivo(){
+    if (this.fileId) return this.fileId;
+    const q = encodeURIComponent("name='"+ARCHIVO+"' and trashed=false");
+    const r = await this.api("https://www.googleapis.com/drive/v3/files?q="+q+"&fields=files(id,modifiedTime)&spaces=drive&pageSize=1");
+    const d = await r.json();
+    if (d.files && d.files.length){ this.fileId = d.files[0].id; return this.fileId; }
+    const lim = "-------agenda"+Date.now();
+    const meta = JSON.stringify({ name: ARCHIVO, mimeType: "application/json" });
+    const cuerpo = "--"+lim+"\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"+meta+
+      "\r\n--"+lim+"\r\nContent-Type: application/json\r\n\r\n{}\r\n--"+lim+"--";
+    const c = await this.api("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", {
+      method: "POST", headers: { "Content-Type": "multipart/related; boundary="+lim }, body: cuerpo
+    });
+    this.fileId = (await c.json()).id;
+    return this.fileId;
+  },
+
+  async bajar(){
+    const id = await this.buscarArchivo();
+    const r = await this.api("https://www.googleapis.com/drive/v3/files/"+id+"?alt=media");
+    const t = (await r.text()).trim();
+    if (!t || t === "{}") return null;
+    try{
+      const d = JSON.parse(t);
+      return (d && Array.isArray(d.pacientes) && Array.isArray(d.consultas)) ? d : null;
+    }catch(e){ return null; }
+  },
+
+  async subir(datos){
+    const id = await this.buscarArchivo();
+    await this.api("https://www.googleapis.com/upload/drive/v3/files/"+id+"?uploadType=media", {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(datos)
+    });
+  },
+
+  programar(){
+    if (!this.activo()) return;
+    if (this.fallos >= 3) return;      // no se reintenta solo: espera un toque
+    clearTimeout(this.timer);
+    this.timer = setTimeout(()=> this.correr(false), 4000);
+  },
+
+  async correr(interactivo, forzarConsentimiento){
+    if (!this.activo()) return;
+    /* Si una corrida quedó colgada más de dos minutos, se la da por perdida y
+       se deja pasar la nueva: si no, un cuelgue dejaba la app sin sincronizar
+       hasta cerrarla, y el botón manual tampoco respondía. */
+    if (this.corriendo && Date.now() - (this.desde||0) < 120000){ this.repetir = true; return; }
+    if (!navigator.onLine){ this.marcar("error", "sin conexión"); return; }
+    this.corriendo = true; this.desde = Date.now();
+    this.marcar("trabajando");
+    try{
+      await this.pedirToken(interactivo, forzarConsentimiento);
+      const remoto = await this.bajar();
+      const unido = fundir(db, remoto);
+      const antes = JSON.stringify({p:db.pacientes, c:db.consultas, g:db.config});
+      db = unido;
+      await Store.guardar(db);
+      await this.subir(db);
+      this.ultima = Date.now();
+      this.fallos = 0;
+      this.marcar("listo");
+      if (JSON.stringify({p:db.pacientes, c:db.consultas, g:db.config}) !== antes) render();
+    }catch(e){
+      this.fallos = (this.fallos || 0) + 1;
+      this.marcar(e && e.auth ? "auth" : "error", String(e && e.message || e));
+    }finally{
+      this.corriendo = false;
+      if (this.repetir){ this.repetir = false; setTimeout(()=> this.correr(false), 400); }
+    }
+  }
+};
+
+window.addEventListener("online", ()=> Sync.programar());
+/* Al volver a la app se refresca; al DEJARLA se publica lo que quede pendiente.
+   Este segundo caso es el que importa: alguien entra, cancela una consulta y
+   se va. Si esperáramos a la próxima apertura, las demás verían la sala
+   ocupada todo ese tiempo. */
+document.addEventListener("visibilitychange", ()=>{
+  if (!document.hidden){ Sync.programar(); Salas.programar(); }
+  else { Sync.correr(false); Salas.correr(false); }
+});
+window.addEventListener("pagehide", ()=>{ Sync.correr(false); Salas.correr(false); });
+
+/* ============ planilla compartida de salas ============ */
+/* Solo viajan: id, fecha, hora, duración, sala y nombre de la psicóloga.
+   Ningún dato de pacientes sale del Drive privado de cada una. */
+const HOJA = "Reservas";
+const CABEZAL = ["id","fecha","hora","fin","minutos","sala","profesional","estado","actualizado","propietaria"];
+
+function mensajeGoogle(status, razon, msg){
+  msg = String(msg || "");
+  if (status === 401) return "Se venció el permiso: tocá para reconectar";
+  if (razon === "SERVICE_DISABLED" || /has not been used in project|API has not been used|is disabled/i.test(msg)){
+    const cual = /sheets/i.test(msg) ? "Google Sheets" : (/drive/i.test(msg) ? "Google Drive" : "esa");
+    return "Falta habilitar la API de " + cual + " en tu proyecto de Google Cloud";
+  }
+  if (status === 403 && /insufficient|scope/i.test(msg))
+    return "Falta el permiso de planillas: tocá reconectar y aceptá todas las casillas";
+  if (status === 403) return "Sin permiso sobre la planilla: pedí que te la compartan como editor";
+  if (status === 404) return "No se encontró la planilla: revisá el ID";
+  if (status === 400 && /parse range|Unable to parse/i.test(msg)) return "falta-pestana";
+  if (status === 429 || status === 503) return "Google está ocupado, reintentá en un rato";
+  return "Google respondió " + status + (msg ? ": " + msg.slice(0,110) : "");
+}
+
+const Salas = {
+  estado: "off", detalle: "", ultima: 0, timer: null, corriendo: false,
+
+  activo(){ return !!(db.config && db.config.hojaId && db.config.driveId); },
+
+  filaDe(c){
+    return [ c.id, c.fecha, c.hora, aHora(minutos(c.hora)+durDe(c)), String(durDe(c)),
+             salaDe(c.sala).nombre, db.config.profNombre || "(sin nombre)",
+             c.estado === "cancelada" ? "cancelada" : "reservada",
+             new Date(c.mod || Date.now()).toISOString(), db.config.profId ];
+  },
+
+  async leer(){
+    const r = await Sync.api("https://sheets.googleapis.com/v4/spreadsheets/"+
+      encodeURIComponent(db.config.hojaId)+"/values/"+HOJA+"!A1:J20000");
+    const d = await r.json();
+    return (d.values || []);
+  },
+
+  async escribir(rango, filas){
+    await Sync.api("https://sheets.googleapis.com/v4/spreadsheets/"+
+      encodeURIComponent(db.config.hojaId)+"/values/"+encodeURIComponent(rango)+
+      "?valueInputOption=RAW", {
+        method: "PUT", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ values: filas })
+      });
+  },
+
+  async agregar(filas){
+    if (!filas.length) return;
+    await Sync.api("https://sheets.googleapis.com/v4/spreadsheets/"+
+      encodeURIComponent(db.config.hojaId)+"/values/"+HOJA+"!A1:append"+
+      "?valueInputOption=RAW&insertDataOption=INSERT_ROWS", {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ values: filas })
+      });
+  },
+
+  async crearPestana(){
+    await Sync.api("https://sheets.googleapis.com/v4/spreadsheets/"+
+      encodeURIComponent(db.config.hojaId)+":batchUpdate", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ requests:[{ addSheet:{ properties:{ title: HOJA } } }] })
+      });
+  },
+
+  programar(){
+    if (!this.activo()) return;
+    if (this.fallos >= 3) return;      // no se reintenta solo: espera un toque
+    clearTimeout(this.timer);
+    this.timer = setTimeout(()=> this.correr(false), 5000);
+  },
+
+  async correr(interactivo){
+    if (!this.activo()) return;
+    if (this.corriendo && Date.now() - (this.desde||0) < 120000){ this.repetir = true; return; }
+    if (!navigator.onLine) return;
+    if (interactivo) this.fallos = 0;
+    this.corriendo = true; this.desde = Date.now();
+    try{
+      await Sync.pedirToken(interactivo);
+      let filas;
+      try{
+        filas = await this.leer();
+      }catch(e){
+        if (e && e.message === "falta-pestana"){
+          await this.crearPestana();     // la app crea la pestaña Reservas sola
+          filas = await this.leer();
+        } else throw e;
+      }
+
+      // cabezal
+      if (!filas.length || String(filas[0][0]||"").toLowerCase() !== "id"){
+        await this.escribir(HOJA+"!A1:J1", [CABEZAL]);
+        filas = [CABEZAL].concat(filas.length && String(filas[0][0]||"").toLowerCase() !== "id" ? filas : []);
+      }
+
+      const yo = db.config.profId;
+      const indice = new Map();          // id -> nº de fila real
+      const otras = [];
+      for (let i=1; i<filas.length; i++){
+        const f = filas[i]; if (!f || !f[0]) continue;
+        indice.set(f[0], i+1);
+        if (f[9] !== yo && f[7] !== "borrada"){
+          otras.push({ id:f[0], fecha:f[1], hora:f[2], dur:parseInt(f[4],10)||60,
+                       sala: String(f[5]||"").toLowerCase().indexOf("azul")>=0 ? "azul" : "naranja",
+                       prof: f[6] || "otra psicóloga", estado: f[7] || "reservada",
+                       propietaria: f[9] || "" });
+        }
+      }
+      ajenas = otras;
+
+      // solo se publican las reservas recientes, para no inflar la planilla
+      const desde = sumarDias(hoyISO(), -90);
+      const mias = db.consultas.filter(c => c.fecha >= desde);
+      const nuevas = [], cambios = [];
+      mias.forEach(c=>{
+        const fila = this.filaDe(c);
+        const n = indice.get(c.id);
+        if (!n) nuevas.push(fila);
+        else {
+          const act = filas[n-1] || [];
+          if (CABEZAL.some((_,k)=> String(act[k]==null?"":act[k]) !== String(fila[k])))
+            cambios.push({ range: HOJA+"!A"+n+":J"+n, values: [fila] });
+        }
+      });
+      // reservas mías que borré en el teléfono y siguen publicadas
+      Object.keys(db.borrados).forEach(id=>{
+        const n = indice.get(id);
+        if (!n) return;
+        const act = filas[n-1] || [];
+        if (act[9] === yo && act[7] !== "borrada")
+          cambios.push({ range: HOJA+"!H"+n, values: [["borrada"]] });
+      });
+
+      if (cambios.length){
+        await Sync.api("https://sheets.googleapis.com/v4/spreadsheets/"+
+          encodeURIComponent(db.config.hojaId)+"/values:batchUpdate", {
+            method:"POST", headers:{"Content-Type":"application/json"},
+            body: JSON.stringify({ valueInputOption:"RAW", data: cambios })
+          });
+      }
+      await this.agregar(nuevas);
+
+      this.ultima = Date.now();
+      this.estado = "listo"; this.detalle = ""; this.fallos = 0;
+      this.pendiente = false;
+      render();
+    }catch(e){
+      this.fallos = (this.fallos || 0) + 1;
+      this.estado = e && e.auth ? "auth" : "error";
+      this.detalle = String(e && e.message || e);
+      if (this.detalle === "falta-pestana")
+        this.detalle = "No pude crear la pestaña Reservas: revisá que tengas permiso de editor";
+      render();
+    }finally{
+      this.corriendo = false;
+      if (this.repetir){ this.repetir = false; setTimeout(()=> this.correr(false), 400); }
+    }
+  }
+};
+
+/* ============ utilidades ============ */
+const $ = (s, r=document) => r.querySelector(s);
+const nuevoId = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const esc = t => String(t==null?"":t).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+const DIAS = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+const DIAS_C = ["dom","lun","mar","mié","jue","vie","sáb"];
+const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","setiembre","octubre","noviembre","diciembre"];
+
+function iso(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function fecha(isoStr){ const p=String(isoStr).split("-"); return new Date(+p[0], +p[1]-1, +p[2]); }
+function hoyISO(){ return iso(new Date()); }
+function sumarDias(isoStr,n){ const d=fecha(isoStr); d.setDate(d.getDate()+n); return iso(d); }
+function corta(isoStr){ const p=String(isoStr).split("-"); return p[2]+"/"+p[1]; }
+function larga(isoStr){ const d=fecha(isoStr); return DIAS[d.getDay()]+" "+d.getDate()+" de "+MESES[d.getMonth()]; }
+function diaCorto(isoStr){ return DIAS_C[fecha(isoStr).getDay()]; }
+
+function minutos(h){ const p=String(h||"00:00").split(":"); return (parseInt(p[0],10)||0)*60 + (parseInt(p[1],10)||0); }
+function aHora(m){ m=((Math.round(m)%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"); }
+function durDe(c){ return Math.max(5, parseInt(c && c.dur,10) || parseInt(db.config.duracion,10) || 60); }
+function durTxt(m){
+  if (m < 60) return m+" min";
+  const h = Math.floor(m/60), r = m%60;
+  return h + " h" + (r ? " "+r+" min" : "");
+}
+
+function miles(v){ return String(Math.round(Math.abs(v))).replace(/\B(?=(\d{3})+(?!\d))/g,"."); }
+function plata(v){ const n=Number(v)||0; return (db.config.moneda||"$")+" "+(n<0?"-":"")+miles(n); }
+function importeDe(c){
+  if (c && c.monto !== undefined && c.monto !== null && c.monto !== "") return Number(c.monto)||0;
+  const p = paciente(c && c.pacienteId);
+  return (p && Number(p.arancel)) || 0;
+}
+function seCobra(c){
+  if (c.estado === "asistio") return true;
+  if (c.estado === "falto" && db.config.cobrarFaltas) return true;
+  return false;
+}
+const activa = c => c.estado !== "cancelada";
+/* Lunes de la semana que contiene esa fecha (la semana arranca en lunes). */
+function lunesDe(f){ const d=fecha(f); const w=(d.getDay()+6)%7; return sumarDias(f,-w); }
+
+/* Ocupación real de una sala en un día: mis reservas más las de las demás.
+   Devuelve solo hora, duración y de quién es; nunca datos de pacientes ajenos. */
+function ocupacionDe(fecha, sala, exceptoId){
+  sala = sala || "naranja";
+  const propias = db.consultas
+    .filter(x => x.fecha===fecha && (x.sala||"naranja")===sala && activa(x) && x.id!==exceptoId)
+    .map(x => ({ hora:x.hora, dur:durDe(x), quien: pilaDe(x.pacienteId) || nombreDe(x.pacienteId), propia:true }));
+  const otras = ajenas
+    .filter(x => x.fecha===fecha && x.sala===sala && x.estado!=="cancelada" && x.id!==exceptoId)
+    .map(x => ({ hora:x.hora, dur:x.dur, quien:x.prof, propia:false }));
+  return propias.concat(otras).sort((a,b)=> a.hora.localeCompare(b.hora));
+}
+
+function toast(msg){
+  const t=$("#toast"); t.textContent=msg; t.hidden=false;
+  clearTimeout(toast._t); toast._t=setTimeout(()=>{t.hidden=true},2400);
+}
+
+function telWhatsApp(tel){
+  const cc = String(db.config.codigoPais||"598").replace(/\D/g,"");
+  let t = String(tel||"").trim();
+  if (t.startsWith("+")) return t.slice(1).replace(/\D/g,"");
+  t = t.replace(/\D/g,"");
+  if (t.startsWith("00")) return t.slice(2);
+  if (t.startsWith(cc) && t.length >= cc.length+8) return t;
+  if (t.startsWith("0")) t = t.slice(1);
+  return cc + t;
+}
+
+function mensajeDe(c, tipo){
+  const p = paciente(c.pacienteId);
+  const base = tipo === "cambio"
+    ? (db.config.plantillaCambio || CONFIG_DEF.plantillaCambio)
+    : (db.config.plantilla || CONFIG_DEF.plantilla);
+  return String(base)
+    .replace(/\{nombre\}/g, pilaDe(c.pacienteId))
+    .replace(/\{nombreCompleto\}/g, nombreLargo(p))
+    .replace(/\{dia\}/g, DIAS[fecha(c.fecha).getDay()])
+    .replace(/\{fecha\}/g, fecha(c.fecha).getDate()+"/"+(fecha(c.fecha).getMonth()+1))
+    .replace(/\{hora\}/g, c.hora||"");
+}
+
+const paciente = id => db.pacientes.find(p=>p.id===id);
+/* El paciente guarda nombre y apellido por separado: así los mensajes pueden
+   tutear con el nombre de pila sin depender de partir la cadena por el espacio
+   (que fallaba con "Fernández, Lucía" o con apellidos compuestos). */
+const nombreLargo = p => p ? [p.nombre, p.apellido].filter(Boolean).join(" ").trim() : "";
+const nombreDe = id => { const p=paciente(id); return p ? (nombreLargo(p) || "(sin nombre)") : "(paciente eliminado)"; };
+const pilaDe = id => { const p=paciente(id); return p ? (p.nombre || nombreLargo(p)) : ""; };
+/* Inicial del nombre + inicial del último término del apellido, para saltear
+   partículas: "María del Carmen Silva Pérez" da MP, no MD. */
+function inicialesDe(p){
+  if (!p) return "?";
+  const n = String(p.nombre||"").trim().split(/\s+/)[0] || "";
+  const ap = String(p.apellido||"").trim().split(/\s+/).filter(Boolean);
+  const a = ap.length ? ap[ap.length-1] : "";
+  return ((n[0]||"") + (a[0]||"")).toUpperCase() || iniciales(nombreLargo(p));
+}
+const ordenar = arr => arr.slice().sort((a,b)=> (a.fecha+a.hora).localeCompare(b.fecha+b.hora));
+const iniciales = n => String(n||"?").trim().split(/\s+/).slice(0,2).map(x=>x[0]).join("").toUpperCase();
+
+function enlaceWA(c, tipo){
+  const p = paciente(c.pacienteId);
+  if (!p || !p.telefono) return "";
+  return "https://wa.me/" + telWhatsApp(p.telefono) + "?text=" + encodeURIComponent(mensajeDe(c, tipo));
+}
+
+/* ============ hoja modal ============ */
+function abrir(html){
+  $("#hojaModal").innerHTML = html;
+  $("#velo").hidden = false;
+  document.body.style.overflow = "hidden";
+}
+function cerrar(){
+  $("#velo").hidden = true;
+  $("#hojaModal").innerHTML = "";
+  document.body.style.overflow = "";
+}
+$("#velo").addEventListener("click", e => { if (e.target.id === "velo") cerrar(); });
+
+/* ============ navegación ============ */
+let tab = "agenda";
+let filtro = "hoy";
+let busqueda = "";
+let mesSel = hoyISO().slice(0,7);
+let diaSel = hoyISO();
+let modoCal = "dia";          // dia | semana | mes  (pestaña Calendario)
+
+function irA(t){
+  tab = t;
+  document.querySelectorAll("nav button").forEach(x=>{
+    if (x.dataset.tab === t) x.setAttribute("aria-current","page");
+    else x.removeAttribute("aria-current");
+  });
+}
+document.querySelectorAll("nav button").forEach(b=>{
+  b.addEventListener("click", ()=>{
+    irA(b.dataset.tab);
+    window.scrollTo(0,0);
+    render();
+  });
+});
+
+$("#fab").addEventListener("click", ()=>{
+  if (tab === "pacientes") formPaciente();
+  else if (tab === "dia") formConsulta(null, {fecha: diaSel});
+  else formConsulta();
+});
+
+/* ============ render ============ */
+function render(){
+  $("#fab").style.display = (tab==="agenda"||tab==="pacientes"||tab==="dia") ? "block" : "none";
+  $("#fab").setAttribute("aria-label", tab==="pacientes" ? "Agregar paciente" : "Agendar consulta");
+  if (tab==="agenda") vistaAgenda();
+  else if (tab==="dia") vistaCalendario();
+  else if (tab==="pacientes") vistaPacientes();
+  else if (tab==="mes") vistaMes();
+  else vistaAjustes();
+}
+
+/* ---- agenda ---- */
+function vistaAgenda(){
+  const hoy = hoyISO(), man = sumarDias(hoy,1), fin = sumarDias(hoy,7);
+  let lista = ordenar(db.consultas);
+  if (filtro==="hoy") lista = lista.filter(c=>c.fecha===hoy);
+  else if (filtro==="manana") lista = lista.filter(c=>c.fecha===man);
+  else if (filtro==="semana") lista = lista.filter(c=>c.fecha>=hoy && c.fecha<=fin);
+  else if (filtro==="proximas") lista = lista.filter(c=>c.fecha>=hoy);
+  else if (filtro==="pasadas") lista = lista.filter(c=>c.fecha<hoy).reverse();
+
+  const chips = [["hoy","Hoy"],["manana","Mañana"],["semana","7 días"],["proximas","Próximas"],["pasadas","Anteriores"],["todas","Todas"]]
+    .map(([k,t])=>`<button class="chip" data-f="${k}" aria-pressed="${filtro===k}">${t}</button>`).join("");
+
+  const pend = lista.filter(c=>c.estado==="pendiente" && c.fecha<hoy).length;  const aviso = (filtro==="hoy"||filtro==="proximas") && pend
+    ? `<div class="aviso">Tenés ${pend} consulta${pend>1?"s":""} de días anteriores sin marcar. Mirá <b>Anteriores</b> para cerrarlas.</div>` : "";
+
+  const cuerpo = lista.length ? lista.map(tarjeta).join("") : `<div class="vacio"><b>No hay consultas acá</b>Tocá el botón + para agendar la primera.</div>`;
+
+  $("#vista").innerHTML = `<div class="chips">${chips}</div>${aviso}${cuerpo}`;
+
+  document.querySelectorAll(".chip").forEach(b=>b.addEventListener("click",()=>{ filtro=b.dataset.f; vistaAgenda(); }));
+  conectarTarjetas();
+}
+
+function tarjeta(c){
+  const clase = c.estado==="asistio" ? "hecha" : (c.estado==="falto" ? "falto" : (c.estado==="cancelada" ? "anulada" : ""));
+  const p = paciente(c.pacienteId);
+  const tel = p && p.telefono ? telWhatsApp(p.telefono) : "";
+  const enlace = tel ? enlaceWA(c, "recordatorio") : "";
+  const wa = tel
+    ? `<a class="wa ${c.recordado?"enviado":""}" href="${enlace}" target="_blank" rel="noopener" data-wa="${c.id}">
+         <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 00-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1012 2zm5.6 14.1c-.2.7-1.2 1.3-2 1.4-.5.1-1.2.1-3.6-.9-3-1.3-5-4.4-5.1-4.6-.2-.2-1.3-1.7-1.3-3.2S6.4 6.6 6.7 6.3c.2-.3.5-.4.7-.4h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.3.3c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.4 1.5.3.1.4.1.6-.1l.9-1c.2-.2.4-.2.6-.1l2 1c.3.1.4.2.5.3.1.2.1.7-.1 1.3z"/></svg>
+         ${c.recordado?"Reenviar":"Recordar"}</a>`
+    : `<span style="margin-left:auto;font-size:12px;color:var(--ink-soft)">sin teléfono</span>`;
+  const sl = salaDe(c.sala);
+  const marca = `<span class="chipSala s-${sl.id}">${sl.nombre}</span>` +
+    (c.movida ? `<span class="marca">cambiada</span>` : "");
+  const acciones = c.estado==="cancelada"
+    ? `<div class="anulRow">Cancelada<button data-est="pendiente" data-c="${c.id}">Reactivar</button></div>`
+    : `<div class="acciones">
+        <div class="estado">
+          <button class="e-pend" data-est="pendiente" data-c="${c.id}" aria-pressed="${c.estado==="pendiente"}">Pendiente</button>
+          <button class="e-ok" data-est="asistio" data-c="${c.id}" aria-pressed="${c.estado==="asistio"}">Asistió</button>
+          <button class="e-no" data-est="falto" data-c="${c.id}" aria-pressed="${c.estado==="falto"}">Faltó</button>
+        </div>
+        ${wa}
+      </div>`;
+  return `<article class="cita ${clase}" data-id="${c.id}">
+    <div class="riel">
+      <div class="hora num">${esc(c.hora||"--:--")}</div>
+      <div class="dia num">${diaCorto(c.fecha)} ${corta(c.fecha)}</div>
+    </div>
+    <div class="cuerpo">
+      <div class="fila1">
+        <div class="nombre" data-edit="${c.id}">${esc(nombreDe(c.pacienteId))}${marca}</div>
+        <button class="menu" data-menu="${c.id}" aria-label="Opciones">⋯</button>
+      </div>
+      ${c.notas?`<div class="notas">${esc(c.notas)}</div>`:""}
+      ${acciones}
+    </div>
+  </article>`;
+}
+
+function conectarTarjetas(){
+  document.querySelectorAll("[data-est]").forEach(b=>{
+    b.addEventListener("click", async ()=>{
+      const c = db.consultas.find(x=>x.id===b.dataset.c);
+      if (!c) return;
+      c.estado = b.dataset.est;
+      sello(c);
+      await persistir();
+      render();
+    });
+  });
+  document.querySelectorAll("[data-wa]").forEach(a=>{
+    a.addEventListener("click", async ()=>{
+      const c = db.consultas.find(x=>x.id===a.dataset.wa);
+      if (c){ c.recordado = true; sello(c); await persistir(); setTimeout(render, 700); }
+    });
+  });
+  document.querySelectorAll("[data-edit]").forEach(n=>{
+    n.addEventListener("click", ()=> formConsulta(n.dataset.edit));
+  });
+  document.querySelectorAll("[data-menu]").forEach(b=>{
+    b.addEventListener("click", ()=> menuConsulta(b.dataset.menu));
+  });
+}
+
+function menuConsulta(id){
+  const c = db.consultas.find(x=>x.id===id);
+  if (!c) return;
+  const anulada = c.estado === "cancelada";
+  abrir(`<h3>${esc(nombreDe(c.pacienteId))}</h3>
+    <div class="sub">${larga(c.fecha)} · ${esc(c.hora)} · ${durTxt(durDe(c))} · sala ${esc(salaDe(c.sala).nombre)} · ${plata(importeDe(c))}${anulada?" · cancelada":""}
+      ${c.movida?`<br>Cambiada desde ${larga(c.origen.fecha)} ${esc(c.origen.hora)}`:""}</div>
+    <button class="btn" id="mMover">Cambiar día u hora</button>
+    <button class="btn sec" id="mEdit">Editar consulta</button>
+    <button class="btn sec" id="mDia">Ver el día completo</button>
+    <button class="btn sec" id="mCopiar">Copiar mensaje de recordatorio</button>
+    <button class="btn sec" id="mFicha">Ver ficha del paciente</button>
+    <button class="btn ${anulada?"sec":"peligro"}" id="mAnular">${anulada?"Reactivar la consulta":"Marcar como cancelada"}</button>
+    <button class="btn peligro" id="mBorrar">Eliminar consulta</button>
+    <button class="btn sec" id="mCerrar">Cancelar</button>`);
+  $("#mMover").onclick = ()=> reprogramar(id);
+  $("#mEdit").onclick = ()=> formConsulta(id);
+  $("#mDia").onclick = ()=>{ diaSel = c.fecha; modoCal = "dia"; cerrar(); irA("dia"); window.scrollTo(0,0); render(); };
+  $("#mFicha").onclick = ()=> fichaPaciente(c.pacienteId);
+  $("#mCerrar").onclick = cerrar;
+  $("#mAnular").onclick = async ()=>{
+    c.estado = anulada ? "pendiente" : "cancelada";
+    sello(c);
+    await persistir(true); cerrar(); render();
+    toast(anulada ? "Consulta reactivada" : "Consulta cancelada");
+  };
+  $("#mCopiar").onclick = async ()=>{
+    const txt = mensajeDe(c, "recordatorio");
+    try{ await navigator.clipboard.writeText(txt); toast("Mensaje copiado"); }
+    catch(e){ prompt("Copiá el mensaje:", txt); }
+    cerrar();
+  };
+  $("#mBorrar").onclick = async ()=>{
+    if (!confirm("¿Eliminar esta consulta?")) return;
+    db.consultas = db.consultas.filter(x=>x.id!==id);
+    tumba(id);
+    await persistir(true); cerrar(); render(); toast("Consulta eliminada");
+  };
+}
+
+/* ---- cambiar día u hora ---- */
+function reprogramar(id){
+  const c = db.consultas.find(x=>x.id===id);
+  if (!c) return;
+  abrir(`<h3>Cambiar la cita</h3>
+    <div class="sub">${esc(nombreDe(c.pacienteId))} · ahora es el ${larga(c.fecha)} a las ${esc(c.hora)}</div>
+    <div class="atajos">
+      <button data-salto="1">Mañana</button>
+      <button data-salto="7">Semana que viene</button>
+      <button data-salto="14">En dos semanas</button>
+    </div>
+    <div class="dosCol">
+      <div><label for="rFecha">Nueva fecha</label><input type="date" id="rFecha" value="${c.fecha}"></div>
+      <div><label for="rHora">Nueva hora</label><input type="time" id="rHora" value="${c.hora}"></div>
+    </div>
+    <div id="rOcup"></div>
+    <button class="btn" id="rGuardar">Guardar el cambio</button>
+    <button class="btn sec" id="rCancelar">Volver</button>`);
+
+  function pintar(){
+    const f = $("#rFecha").value;
+    const otras = ordenar(db.consultas.filter(x=>x.fecha===f && x.id!==c.id && activa(x)));
+    $("#rOcup").innerHTML = otras.length
+      ? `<div class="ocupadas">Ese día ya tenés: ${otras.map(x=>
+          `<b class="num">${esc(x.hora)}</b> ${esc(pilaDe(x.pacienteId) || nombreDe(x.pacienteId))}`).join(" · ")}</div>`
+      : `<div class="ocupadas">Ese día está libre.</div>`;
+  }
+  pintar();
+  $("#rFecha").addEventListener("change", pintar);
+  document.querySelectorAll("[data-salto]").forEach(b=>{
+    b.onclick = ()=>{ $("#rFecha").value = sumarDias(c.fecha, parseInt(b.dataset.salto,10)); pintar(); };
+  });
+  $("#rCancelar").onclick = ()=> menuConsulta(id);
+  $("#rGuardar").onclick = async ()=>{
+    const f = $("#rFecha").value, h = $("#rHora").value;
+    if (!f || !h){ toast("Completá fecha y hora"); return; }
+    if (f === c.fecha && h === c.hora){ toast("Es el mismo día y hora"); return; }
+
+    const desde = minutos(h), hasta = desde + durDe(c);
+    const choques = ocupacionDe(f, c.sala||"naranja", c.id).filter(x =>
+      desde < minutos(x.hora) + x.dur && hasta > minutos(x.hora));
+    if (choques.length && !confirm("La sala " + salaDe(c.sala).nombre + " está ocupada: " +
+        choques.map(x=>x.hora+" "+x.quien).join(" · ") + ".\n¿Cambiar igual?")) return;
+
+    if (!c.movida) c.origen = { fecha: c.fecha, hora: c.hora };
+    c.movida = (c.movida || 0) + 1;
+    c.fecha = f; c.hora = h;
+    c.estado = "pendiente";
+    c.recordado = false;
+    sello(c);
+    await persistir(true);
+
+    if (tab === "dia") diaSel = f;
+    render();
+
+    const link = enlaceWA(c, "cambio");
+    abrir(`<h3>Cita cambiada</h3>
+      <div class="exito">${esc(nombreDe(c.pacienteId))} queda para el <b>${larga(f)}</b> a las <b>${esc(h)}</b>.</div>
+      ${link
+        ? `<a class="btn" href="${link}" target="_blank" rel="noopener" id="rWA">Avisarle por WhatsApp</a>`
+        : `<div class="ocupadas">Este paciente no tiene teléfono cargado, así que no puedo armar el aviso.</div>`}
+      <button class="btn sec" id="rCopiar">Copiar el aviso</button>
+      <button class="btn sec" id="rListo">Listo</button>`);
+    $("#rListo").onclick = cerrar;
+    if (link) $("#rWA").onclick = ()=> setTimeout(cerrar, 400);
+    $("#rCopiar").onclick = async ()=>{
+      const txt = mensajeDe(c, "cambio");
+      try{ await navigator.clipboard.writeText(txt); toast("Aviso copiado"); }
+      catch(e){ prompt("Copiá el aviso:", txt); }
+    };
+  };
+}
+
+/* ---- formulario de consulta ---- */
+function formConsulta(id, pre){
+  if (!db.pacientes.length){
+    abrir(`<h3>Primero cargá un paciente</h3>
+      <div class="sub">Necesitás al menos un paciente para poder agendar.</div>
+      <button class="btn" id="irPac">Agregar paciente</button>
+      <button class="btn sec" id="cerrar1">Cancelar</button>`);
+    $("#irPac").onclick = ()=> formPaciente();
+    $("#cerrar1").onclick = cerrar;
+    return;
+  }
+  const c = id ? db.consultas.find(x=>x.id===id) : null;
+  const ops = db.pacientes.slice().sort((a,b)=>nombreLargo(a).localeCompare(nombreLargo(b)))
+    .map(p=>`<option value="${p.id}" ${c&&c.pacienteId===p.id?"selected":""}>${esc(nombreLargo(p))}</option>`).join("");
+  abrir(`<h3>${c?"Editar consulta":"Nueva consulta"}</h3>
+    <label for="fPac">Paciente</label>
+    <select id="fPac">${ops}</select>
+    <label for="fSala">Sala</label>
+    <select id="fSala">${SALAS.map(x=>`<option value="${x.id}" ${
+      (c ? (c.sala||"naranja") : ((pre&&pre.sala)||db.config.salaDef||"naranja"))===x.id?"selected":""
+    }>${x.nombre}</option>`).join("")}</select>
+    <div class="dosCol">
+      <div><label for="fFecha">Fecha</label><input type="date" id="fFecha" value="${c?c.fecha:((pre&&pre.fecha)||hoyISO())}"></div>
+      <div><label for="fHora">Hora</label><input type="time" id="fHora" value="${c?c.hora:((pre&&pre.hora)||db.config.horaInicio||"09:00")}"></div>
+    </div>
+    <div class="dosCol">
+      <div><label for="fDur">Duración</label>
+        <select id="fDur">${[15,20,30,45,60,90,120].map(m=>{
+          const sel = (c ? durDe(c) : (parseInt(db.config.duracion,10)||60)) === m;
+          return `<option value="${m}" ${sel?"selected":""}>${durTxt(m)}</option>`;
+        }).join("")}</select></div>
+      <div><label for="fMonto">Importe (${esc(db.config.moneda||"$")})</label>
+        <input type="number" id="fMonto" inputmode="numeric" min="0" step="1"
+          value="${c ? importeDe(c) : ""}" placeholder="0"></div>
+    </div>
+    <div id="fOcup"></div>
+    <label for="fNotas">Nota (opcional)</label>
+    <input type="text" id="fNotas" value="${c?esc(c.notas||""):""}" placeholder="Motivo, sala, observación">
+    ${c?"":`<label class="check"><input type="checkbox" id="fRep"> Repetir todas las semanas</label>
+      <div id="fRepN" style="display:none"><label for="fSem">¿Cuántas sesiones en total?</label>
+      <input type="number" id="fSem" value="4" min="2" max="52" inputmode="numeric"></div>`}
+    <button class="btn" id="fGuardar">${c?"Guardar cambios":"Agendar"}</button>
+    <button class="btn sec" id="fCancelar">Cancelar</button>`);
+  if (!c){
+    $("#fRep").onchange = e => { $("#fRepN").style.display = e.target.checked ? "block" : "none"; };
+  }
+  function pintarOcupadas(){
+    const f = $("#fFecha").value;
+    const sala = $("#fSala").value || "naranja";
+    const otras = ocupacionDe(f, sala, c && c.id);
+    $("#fOcup").innerHTML = otras.length
+      ? `<div class="ocupadas">Sala ${esc(salaDe(sala).nombre)} ese día: ${otras.map(x=>
+          `<b class="num">${esc(x.hora)}</b> ${esc(x.quien)}`).join(" · ")}</div>`
+      : `<div class="ocupadas">La sala ${esc(salaDe(sala).nombre)} está libre ese día.</div>`;
+  }
+  pintarOcupadas();
+  $("#fFecha").addEventListener("change", pintarOcupadas);
+  $("#fSala").addEventListener("change", pintarOcupadas);
+
+  function autoMonto(){
+    const p = paciente($("#fPac").value);
+    $("#fMonto").value = (p && Number(p.arancel)) ? Number(p.arancel) : "";
+  }
+  if (!c) autoMonto();
+  $("#fPac").addEventListener("change", autoMonto);
+
+  $("#fCancelar").onclick = cerrar;
+  $("#fGuardar").onclick = async ()=>{
+    const datos = {
+      pacienteId: $("#fPac").value,
+      fecha: $("#fFecha").value,
+      hora: $("#fHora").value,
+      sala: $("#fSala").value || "naranja",
+      dur: parseInt($("#fDur").value,10) || 60,
+      monto: $("#fMonto").value === "" ? "" : (parseInt($("#fMonto").value,10) || 0),
+      notas: $("#fNotas").value.trim()
+    };
+    if (!datos.fecha || !datos.hora){ toast("Completá fecha y hora"); return; }
+
+    const rep = (!c && $("#fRep").checked) ? Math.min(52, Math.max(1, parseInt($("#fSem").value,10)||1)) : 1;
+    const fechas = []; for (let i=0;i<rep;i++) fechas.push(sumarDias(datos.fecha, i*7));
+
+    const desde = minutos(datos.hora), hasta = desde + datos.dur;
+    const choques = [];
+    fechas.forEach(f=>{
+      ocupacionDe(f, datos.sala, c && c.id).forEach(x=>{
+        if (desde < minutos(x.hora) + x.dur && hasta > minutos(x.hora))
+          choques.push(corta(f)+" "+x.hora+" "+x.quien);
+      });
+    });
+    if (choques.length && !confirm("Se superpone con: " + choques.slice(0,5).join(" · ")
+        + (choques.length>5 ? " y "+(choques.length-5)+" más" : "") + ".\n¿Agendar igual?")) return;
+
+    if (c){ Object.assign(c, datos); sello(c); }
+    else fechas.forEach(f=> db.consultas.push(sello(Object.assign({}, datos, {
+      id: nuevoId(), fecha: f, estado: "pendiente", recordado: false
+    }))));
+
+    await persistir(true); cerrar();
+    if (tab === "dia") diaSel = datos.fecha;
+    else if (tab !== "agenda") irA("agenda");
+    render();
+    toast(c ? "Consulta actualizada" : (rep>1 ? rep+" consultas agendadas" : "Consulta agendada"));
+  };
+}
+
+/* ---- vista de día ---- */
+const cap = s => String(s).charAt(0).toUpperCase() + String(s).slice(1);
+const estadoTxt = e => e==="asistio" ? "asistió" : (e==="falto" ? "faltó" : (e==="cancelada" ? "cancelada" : "pendiente"));
+
+/* ---- pestaña Calendario: día, semana o mes, siempre con MIS pacientes ---- */
+function selectorCal(){
+  return `<div class="kModo">
+    ${[["dia","Día"],["semana","Semana"],["mes","Mes"]].map(([k,t])=>
+      `<button data-modo="${k}" aria-pressed="${modoCal===k}">${t}</button>`).join("")}
+  </div>`;
+}
+function conectarSelectorCal(){
+  document.querySelectorAll("[data-modo]").forEach(b=> b.onclick = ()=>{
+    modoCal = b.dataset.modo; window.scrollTo(0,0); vistaCalendario();
+  });
+}
+
+function vistaCalendario(){
+  if (modoCal === "semana") vistaSemanaPropia();
+  else if (modoCal === "mes") vistaMesPropio();
+  else vistaDia();
+}
+
+/* Bloques de la semana: solo consultas propias, con el nombre del paciente. */
+function vistaSemanaPropia(){
+  const lun = lunesDe(diaSel);
+  const todos = []; for (let i=0;i<7;i++) todos.push(sumarDias(lun,i));
+  const rango = new Set(todos);
+  const sem = db.consultas.filter(c => rango.has(c.fecha));
+  const dias = todos.filter((d,i)=> i < 5 || sem.some(c=>c.fecha===d));
+
+  let desde = minutos(db.config.horaInicio || "08:00");
+  let hasta = minutos(db.config.horaFin || "20:00");
+  if (hasta <= desde) hasta = Math.min(1440, desde + 60);
+  sem.forEach(c=>{
+    desde = Math.min(desde, minutos(c.hora));
+    hasta = Math.max(hasta, minutos(c.hora) + durDe(c));
+  });
+  desde = Math.floor(desde/60)*60; hasta = Math.ceil(hasta/60)*60;
+  const filas = (hasta - desde)/30;
+  const alto = f => `calc(var(--kfila) * ${f})`;
+
+  let horas = "";
+  for (let m=desde; m<hasta; m+=60) horas += `<div class="num">${aHora(m)}</div>`;
+
+  const cols = dias.map(d=>{
+    const finde = [0,6].indexOf(fecha(d).getDay()) >= 0;
+    const bloques = sem.filter(c=>c.fecha===d).map(c=>{
+      const ini = minutos(c.hora), fin = ini + durDe(c);
+      const top = (ini - desde)/30, h = Math.max(1, durDe(c)/30);
+      const chico = durDe(c) < 45;
+      return `<div class="kB s-${salaDe(c.sala).id} ${c.estado}" data-cita="${c.id}"
+        style="top:${alto(top)};height:calc(${alto(h)} - 2px)">
+        <b>${esc(pilaDe(c.pacienteId) || nombreDe(c.pacienteId))}</b>
+        ${chico?"":`<span class="num">${esc(c.hora)}–${aHora(fin)}</span>`}</div>`;
+    }).join("");
+    return `<div class="kCol${finde?" kFinde":""}${d===hoyISO()?" kHoy":""}" style="height:${alto(filas)}">${bloques}</div>`;
+  }).join("");
+
+  const cab = dias.map(d=>{
+    const dd = fecha(d), finde = [0,6].indexOf(dd.getDay()) >= 0;
+    return `<div class="kD${finde?" kFinde":""}${d===hoyISO()?" kHoy":""}" data-ir="${d}">
+      <div class="kSem">${DIAS_C[dd.getDay()]}</div><div class="kFec num">${dd.getDate()}</div></div>`;
+  }).join("");
+
+  const a = fecha(dias[0]), z = fecha(dias[dias.length-1]);
+  const rot = a.getMonth() === z.getMonth()
+    ? `${a.getDate()} – ${z.getDate()} de ${MESES[z.getMonth()]}`
+    : `${a.getDate()} de ${MESES[a.getMonth()]} – ${z.getDate()} de ${MESES[z.getMonth()]}`;
+  const esta = lunesDe(hoyISO()) === todos[0];
+  const activas = sem.filter(activa).length;
+
+  $("#vista").innerHTML = selectorCal() + `
+    <div class="diaNav">
+      <button id="kAnt" aria-label="Semana anterior">‹</button>
+      <div class="rot">${rot}</div>
+      <button id="kSig" aria-label="Semana siguiente">›</button>
+    </div>
+    <div class="resumen">
+      <span><b>${activas}</b> consulta${activas===1?"":"s"} tuya${activas===1?"":"s"}</span>
+      ${esta ? "<span>esta semana</span>" : `<span id="kHoy" style="color:var(--pine);font-weight:600;cursor:pointer">Ir a hoy</span>`}
+    </div>
+    <div class="kMarco"><div class="kScroll"><div class="kRej" style="--kcols:${dias.length};--kfila:24px">
+      <div class="kEnc"><div class="kEsq"></div>${cab}</div>
+      <div class="kCuerpo"><div class="kHoras">${horas}</div>${cols}</div>
+    </div></div></div>
+    <div class="ocupadas">Solo tus consultas. Tocá una para abrirla, o un día para verlo completo.</div>`;
+
+  conectarSelectorCal();
+  $("#kAnt").onclick = ()=>{ diaSel = sumarDias(lun,-7); vistaSemanaPropia(); };
+  $("#kSig").onclick = ()=>{ diaSel = sumarDias(lun, 7); vistaSemanaPropia(); };
+  if (!esta) $("#kHoy").onclick = ()=>{ diaSel = hoyISO(); vistaSemanaPropia(); };
+  document.querySelectorAll("[data-ir]").forEach(x=> x.onclick = ()=>{
+    diaSel = x.dataset.ir; modoCal = "dia"; vistaCalendario();
+  });
+  document.querySelectorAll(".kB[data-cita]").forEach(x=>
+    x.onclick = ()=> menuConsulta(x.dataset.cita));
+}
+
+function vistaMesPropio(){
+  const base = fecha(diaSel);
+  const y = base.getFullYear(), m = base.getMonth();
+  const primero = new Date(y, m, 1);
+  const arranque = sumarDias(iso(primero), -((primero.getDay()+6)%7));
+  const celdas = []; for (let i=0;i<42;i++) celdas.push(sumarDias(arranque,i));
+  if (celdas[35] && fecha(celdas[35]).getMonth() !== m) celdas.length = 35;
+
+  const cabs = DIAS_C.slice(1).concat(DIAS_C[0]).map(d=>`<div>${d}</div>`).join("");
+  const tope = 3;
+  const cuerpo = celdas.map(d=>{
+    const dd = fecha(d), fuera = dd.getMonth() !== m;
+    const delDia = ordenar(db.consultas.filter(c=>c.fecha===d));
+    const evs = delDia.slice(0,tope).map(c=>
+      `<div class="kEv s-${salaDe(c.sala).id} ${c.estado==="cancelada"?"cancelada":""}"
+        >${esc(c.hora)} ${esc(pilaDe(c.pacienteId) || nombreDe(c.pacienteId))}</div>`).join("");
+    const resto = delDia.length > tope ? `<div class="kMas">+${delDia.length-tope} más</div>` : "";
+    return `<div class="kCel${fuera?" kFuera":""}${d===hoyISO()?" kHoy":""}" data-ir="${d}">
+      <div class="kN num">${dd.getDate()}</div>${evs}${resto}</div>`;
+  }).join("");
+
+  const total = db.consultas.filter(c=>String(c.fecha).slice(0,7)===diaSel.slice(0,7) && activa(c)).length;
+
+  $("#vista").innerHTML = selectorCal() + `
+    <div class="diaNav">
+      <button id="kAnt" aria-label="Mes anterior">‹</button>
+      <div class="rot">${cap(MESES[m])} ${y}</div>
+      <button id="kSig" aria-label="Mes siguiente">›</button>
+    </div>
+    <div class="resumen">
+      <span><b>${total}</b> consulta${total===1?"":"s"} tuya${total===1?"":"s"} este mes</span>
+      <span id="kHoy" style="color:var(--pine);font-weight:600;cursor:pointer">Ir a hoy</span>
+    </div>
+    <div class="kMes"><div class="kMesCab">${cabs}</div><div class="kMesRej">${cuerpo}</div></div>
+    <div class="ocupadas">Solo tus consultas. Tocá un día para verlo completo.</div>`;
+
+  conectarSelectorCal();
+  $("#kAnt").onclick = ()=>{ diaSel = iso(new Date(y, m-1, 1)); vistaMesPropio(); };
+  $("#kSig").onclick = ()=>{ diaSel = iso(new Date(y, m+1, 1)); vistaMesPropio(); };
+  $("#kHoy").onclick = ()=>{ diaSel = hoyISO(); vistaMesPropio(); };
+  document.querySelectorAll("[data-ir]").forEach(x=> x.onclick = ()=>{
+    diaSel = x.dataset.ir; modoCal = "dia"; vistaCalendario();
+  });
+}
+
+function vistaDia(){
+  const paso = Math.max(10, parseInt(db.config.paso,10) || 30);
+
+  // reservas propias (con paciente) y ajenas (solo nombre de la profesional)
+  const mias = db.consultas.filter(c=>c.fecha===diaSel);
+  const ajenasHoy = ajenas.filter(c=>c.fecha===diaSel && c.estado!=="cancelada");
+  const ocupadas = mias.filter(activa).map(c=>({
+      id:c.id, hora:c.hora, dur:durDe(c), sala:c.sala||"naranja", propia:true, ref:c
+    })).concat(ajenasHoy.map(c=>({
+      id:c.id, hora:c.hora, dur:c.dur, sala:c.sala, propia:false, prof:c.prof
+    })));
+  const anuladas = mias.filter(c=>!activa(c));
+
+  let ini = minutos(db.config.horaInicio || "08:00");
+  let fin = minutos(db.config.horaFin || "20:00");
+  if (fin <= ini) fin = Math.min(1440, ini + 60);
+  ocupadas.forEach(o=>{
+    ini = Math.min(ini, minutos(o.hora));
+    fin = Math.max(fin, minutos(o.hora) + o.dur);
+  });
+  ini = Math.max(0, Math.floor(ini/paso)*paso);
+  fin = Math.min(1440, Math.ceil(fin/paso)*paso);
+
+  const libres = {};
+  SALAS.forEach(s=> libres[s.id] = 0);
+
+  let filas = "";
+  for (let s=ini; s<fin; s+=paso){
+    const e = s + paso;
+    const punto = (s % 60 === 0) ? " enPunto" : "";
+    let celdas = "";
+    SALAS.forEach(sala=>{
+      const o = ocupadas.find(x => x.sala===sala.id && minutos(x.hora) < e && minutos(x.hora)+x.dur > s);
+      if (!o){
+        libres[sala.id]++;
+        celdas += `<div class="cel libre" data-libre="${aHora(s)}" data-sala="${sala.id}">
+          <span class="mas">+</span></div>`;
+      } else {
+        const arranca = minutos(o.hora) >= s && minutos(o.hora) < e;
+        const clic = o.propia ? ` data-cita="${o.id}"` : "";
+        const est = o.propia ? o.ref.estado : "reservada";
+        const quien = o.propia ? nombreDe(o.ref.pacienteId) : o.prof;
+        celdas += `<div class="cel ocupada s-${sala.id} ${est}${o.propia?" propia":" ajena"}${arranca?"":" sigue"}"${clic}>
+          ${arranca
+            ? `<b>${esc(quien)}</b><span class="num">${esc(o.hora)}–${aHora(minutos(o.hora)+o.dur)}</span>`
+            : `<span class="cont">·</span>`}</div>`;
+      }
+    });
+    filas += `<div class="slot2${punto}"><div class="h num">${aHora(s)}</div>${celdas}</div>`;
+  }
+
+  const esHoy = diaSel === hoyISO();
+  const totMias = mias.filter(activa).length;
+  const totAjenas = ajenasHoy.length;
+
+  $("#vista").innerHTML = selectorCal() + `
+    <div class="diaNav">
+      <button id="dAnt" aria-label="Día anterior">‹</button>
+      <div class="rot">${cap(larga(diaSel))}<input type="date" id="dFecha" value="${diaSel}" aria-label="Elegir día"></div>
+      <button id="dSig" aria-label="Día siguiente">›</button>
+    </div>
+    <div class="resumen">
+      <span><b>${totMias}</b> tuya${totMias===1?"":"s"}${totAjenas?` · <b>${totAjenas}</b> de las demás`:""}</span>
+      ${esHoy ? "<span>hoy</span>" : `<span id="dHoy" style="color:var(--pine);font-weight:600;cursor:pointer">Ir a hoy</span>`}
+    </div>
+    <div class="grilla">
+      <div class="cabSalas"><div class="h"></div>${
+        SALAS.map(s=>`<div class="cab s-${s.id}">${s.nombre}</div>`).join("")}</div>
+      ${filas}
+    </div>
+    <div class="resumen" style="padding-top:10px">
+      <span>${SALAS.map(s=>`${s.nombre}: <b>${durTxt(libres[s.id]*paso)}</b> libre`).join(" · ")}</span>
+    </div>
+    ${anuladas.length ? `<div class="ocupadas">Canceladas tuyas ese día: ${anuladas.map(c=>
+      `<b class="num">${esc(c.hora)}</b> <span data-cita="${c.id}" style="text-decoration:underline">${esc(nombreDe(c.pacienteId))}</span>`).join(" · ")}</div>` : ""}
+    <div class="ocupadas">Tocá un hueco libre para reservar esa sala. De las demás psicólogas solo ves el nombre y el horario, nunca sus pacientes.</div>`;
+
+  conectarSelectorCal();
+  $("#dAnt").onclick = ()=>{ diaSel = sumarDias(diaSel,-1); vistaDia(); };
+  $("#dSig").onclick = ()=>{ diaSel = sumarDias(diaSel, 1); vistaDia(); };
+  $("#dFecha").onchange = e=>{ diaSel = e.target.value || diaSel; vistaDia(); };
+  if (!esHoy) $("#dHoy").onclick = ()=>{ diaSel = hoyISO(); vistaDia(); };
+  document.querySelectorAll("[data-libre]").forEach(d=>
+    d.addEventListener("click", ()=> formConsulta(null, {fecha: diaSel, hora: d.dataset.libre, sala: d.dataset.sala})));
+  document.querySelectorAll("[data-cita]").forEach(d=>
+    d.addEventListener("click", ()=> menuConsulta(d.dataset.cita)));
+}
+
+/* ---- pacientes ---- */
+function vistaPacientes(){
+  const q = busqueda.toLowerCase();
+  const lista = db.pacientes
+    .filter(p => !q || nombreLargo(p).toLowerCase().includes(q) || String(p.telefono||"").includes(q))
+    .sort((a,b)=>nombreLargo(a).localeCompare(nombreLargo(b)));
+  const filas = lista.map(p=>{
+    const n = db.consultas.filter(c=>c.pacienteId===p.id && c.estado==="asistio").length;
+    return `<div class="item" data-p="${p.id}">
+      <div class="avatar">${esc(inicialesDe(p))}</div>
+      <div class="txt"><b>${esc(nombreLargo(p))}</b><span>${esc(p.telefono||"sin teléfono")}${Number(p.arancel)?" · "+plata(p.arancel):""}</span></div>
+      <div class="cuenta"><b class="num">${n}</b>consultas</div>
+    </div>`;
+  }).join("");
+  $("#vista").innerHTML = `<h2 class="titulo">Pacientes</h2>
+    <input type="search" id="bus" placeholder="Buscar por nombre o teléfono" value="${esc(busqueda)}" style="margin-bottom:14px">
+    ${lista.length?filas:`<div class="vacio"><b>Todavía no hay pacientes</b>Tocá el botón + para agregar el primero.</div>`}`;
+  const bus = $("#bus");
+  bus.addEventListener("input", e=>{
+    busqueda = e.target.value;
+    const pos = e.target.selectionStart;
+    vistaPacientes();
+    const nb = $("#bus"); nb.focus(); nb.setSelectionRange(pos,pos);
+  });
+  document.querySelectorAll("[data-p]").forEach(d=> d.addEventListener("click", ()=> fichaPaciente(d.dataset.p)));
+}
+
+function formPaciente(id){
+  const p = id ? paciente(id) : null;
+  abrir(`<h3>${p?"Editar paciente":"Nuevo paciente"}</h3>
+    <div class="dosCol">
+      <div><label for="pNom">Nombre</label>
+        <input type="text" id="pNom" value="${p?esc(p.nombre||""):""}" placeholder="Ana"></div>
+      <div><label for="pApe">Apellido</label>
+        <input type="text" id="pApe" value="${p?esc(p.apellido||""):""}" placeholder="Rodríguez"></div>
+    </div>
+    <div class="sub" style="margin:6px 0 0">Los mensajes saludan solo con el nombre.</div>
+    <label for="pTel">Teléfono (con código de área)</label>
+    <input type="tel" id="pTel" value="${p?esc(p.telefono||""):""}" placeholder="099 123 456" inputmode="tel">
+    <label for="pAra">Importe por consulta (${esc(db.config.moneda||"$")})</label>
+    <input type="number" id="pAra" value="${p&&p.arancel?esc(p.arancel):""}" placeholder="0" inputmode="numeric" min="0" step="1">
+    <div class="sub" style="margin:6px 0 0">Se copia solo al agendar. Podés cambiarlo en cada consulta.</div>
+    <label for="pNot">Notas (opcional)</label>
+    <textarea id="pNot" placeholder="Datos de contacto, obra social, observaciones">${p?esc(p.notas||""):""}</textarea>
+    <button class="btn" id="pGuardar">${p?"Guardar cambios":"Agregar paciente"}</button>
+    <button class="btn sec" id="pCancelar">Cancelar</button>`);
+  $("#pCancelar").onclick = cerrar;
+  $("#pGuardar").onclick = async ()=>{
+    const nombre = $("#pNom").value.trim();
+    if (!nombre){ toast("Falta el nombre"); return; }
+    const datos = {
+      nombre,
+      apellido: $("#pApe").value.trim(),
+      telefono: $("#pTel").value.trim(),
+      arancel: $("#pAra").value === "" ? "" : (parseInt($("#pAra").value,10) || 0),
+      notas: $("#pNot").value.trim()
+    };
+    if (p){ Object.assign(p, datos); sello(p); }
+    else db.pacientes.push(sello(Object.assign({id:nuevoId()}, datos)));
+    await persistir(); cerrar(); render();
+    toast(p?"Paciente actualizado":"Paciente agregado");
+  };
+}
+
+function fichaPaciente(id){
+  const p = paciente(id);
+  if (!p){ toast("Paciente no encontrado"); return; }
+  const cs = ordenar(db.consultas.filter(c=>c.pacienteId===id)).reverse();
+  const asist = cs.filter(c=>c.estado==="asistio").length;
+  const falt = cs.filter(c=>c.estado==="falto").length;
+  const total = cs.filter(seCobra).reduce((a,c)=>a+importeDe(c), 0);
+  const hist = cs.length
+    ? cs.slice(0,40).map(c=>`<div><span class="num">${corta(c.fecha)} · ${esc(c.hora)}${c.movida?' <span class="marca">cambiada</span>':""}</span>
+        <span style="color:${c.estado==="asistio"?"var(--ok)":c.estado==="falto"?"var(--no)":"var(--ink-soft)"}">
+        ${estadoTxt(c.estado)}${seCobra(c)?' · <span class="plata num">'+plata(importeDe(c))+'</span>':""}</span></div>`).join("")
+    : `<div style="color:var(--ink-soft)">Sin consultas registradas</div>`;
+  abrir(`<h3>${esc(nombreLargo(p))}</h3>
+    <div class="sub">${esc(p.telefono||"sin teléfono")}${Number(p.arancel)?" · "+plata(p.arancel)+" por consulta":" · sin importe cargado"}${p.notas?" · "+esc(p.notas):""}</div>
+    <div class="tot">
+      <div><b class="num">${asist}</b><span>asistió</span></div>
+      <div><b class="num">${falt}</b><span>faltó</span></div>
+      <div><b class="num plata">${plata(total)}</b><span>facturado</span></div>
+    </div>
+    <label>Historial</label>
+    <div class="hist">${hist}</div>
+    <button class="btn" id="xAgendar">Agendar consulta</button>
+    <button class="btn sec" id="xVarias">Suspender o eliminar varias</button>
+    <button class="btn sec" id="xEditar">Editar datos</button>
+    <button class="btn peligro" id="xBorrar">Eliminar paciente</button>
+    <button class="btn sec" id="xCerrar">Cerrar</button>`);
+  $("#xCerrar").onclick = cerrar;
+  $("#xEditar").onclick = ()=> formPaciente(id);
+  $("#xVarias").onclick = ()=> variasConsultas(id);
+  $("#xAgendar").onclick = ()=>{ cerrar(); formConsulta(); setTimeout(()=>{ const s=$("#fPac"); if(s) s.value=id; },60); };
+  $("#xBorrar").onclick = async ()=>{
+    if (!confirm("Se elimina el paciente y todas sus consultas. ¿Seguir?")) return;
+    db.consultas.filter(c=>c.pacienteId===id).forEach(c=> tumba(c.id));
+    db.pacientes = db.pacientes.filter(x=>x.id!==id);
+    db.consultas = db.consultas.filter(c=>c.pacienteId!==id);
+    tumba(id);
+    await persistir(true); cerrar(); render(); toast("Paciente eliminado");
+  };
+}
+
+/* ---- suspender o eliminar varias consultas ---- */
+function variasConsultas(id){
+  const p = paciente(id);
+  if (!p) return;
+  let desde = hoyISO(), hasta = sumar90(hoyISO());
+  const marcadas = new Set();
+
+  function candidatas(){
+    return ordenar(db.consultas.filter(c =>
+      c.pacienteId === id && c.fecha >= desde && c.fecha <= hasta && c.estado !== "cancelada"));
+  }
+
+  function dibujar(){
+    const cs = candidatas();
+    cs.forEach(c=>{ if (!marcadas.has(c.id) && !marcadas.has("-"+c.id)) marcadas.add(c.id); });
+    const elegidas = cs.filter(c=>marcadas.has(c.id));
+    const lista = cs.length
+      ? cs.map(c=>`<label class="linea">
+          <input type="checkbox" data-cid="${c.id}" ${marcadas.has(c.id)?"checked":""}>
+          <span class="num">${corta(c.fecha)}</span>
+          <span class="dd">${diaCorto(c.fecha)}</span>
+          <span class="num hh">${esc(c.hora)}</span>
+          <span class="sl">${esc(salaDe(c.sala).nombre)}</span>
+        </label>`).join("")
+      : `<div style="color:var(--ink-soft);padding:12px 2px">No hay consultas en ese período.</div>`;
+
+    $("#vBody").innerHTML = `
+      <div class="dosCol">
+        <div><label for="vD">Desde</label><input type="date" id="vD" value="${desde}"></div>
+        <div><label for="vH">Hasta</label><input type="date" id="vH" value="${hasta}"></div>
+      </div>
+      <div class="atajos">
+        <button data-sem="2">2 semanas</button>
+        <button data-sem="4">1 mes</button>
+        <button data-sem="12">3 meses</button>
+      </div>
+      <label style="margin-top:16px">Consultas en ese período (${cs.length})</label>
+      <div class="listaSel">${lista}</div>
+      ${cs.length?`<div class="atajos" style="margin-top:8px">
+        <button id="vTodas">Marcar todas</button>
+        <button id="vNada">Desmarcar todas</button>
+      </div>`:""}
+      <div class="ocupadas" style="margin-top:14px">
+        <b>${elegidas.length}</b> consulta${elegidas.length===1?"":"s"} marcada${elegidas.length===1?"":"s"}.
+        Suspender deja el registro y libera la sala; eliminar las borra del todo.
+      </div>
+      <button class="btn${elegidas.length?"":" apagado"}" id="vSusp">Suspender las marcadas</button>
+      <button class="btn peligro${elegidas.length?"":" apagado"}" id="vElim">Eliminar las marcadas</button>
+      <button class="btn sec" id="vVolver">Volver</button>`;
+
+    $("#vD").onchange = e=>{ desde = e.target.value || desde; dibujar(); };
+    $("#vH").onchange = e=>{ hasta = e.target.value || hasta; dibujar(); };
+    document.querySelectorAll("[data-sem]").forEach(b=> b.onclick = ()=>{
+      desde = hoyISO();
+      hasta = sumarDias(hoyISO(), parseInt(b.dataset.sem,10)*7);
+      dibujar();
+    });
+    document.querySelectorAll("[data-cid]").forEach(ch=> ch.onchange = ()=>{
+      const cid = ch.dataset.cid;
+      if (ch.checked){ marcadas.add(cid); marcadas.delete("-"+cid); }
+      else { marcadas.delete(cid); marcadas.add("-"+cid); }
+      dibujar();
+    });
+    if ($("#vTodas")) $("#vTodas").onclick = ()=>{
+      cs.forEach(c=>{ marcadas.add(c.id); marcadas.delete("-"+c.id); }); dibujar();
+    };
+    if ($("#vNada")) $("#vNada").onclick = ()=>{
+      cs.forEach(c=>{ marcadas.delete(c.id); marcadas.add("-"+c.id); }); dibujar();
+    };
+    $("#vVolver").onclick = ()=> fichaPaciente(id);
+
+    $("#vSusp").onclick = async ()=>{
+      const e = candidatas().filter(c=>marcadas.has(c.id));
+      if (!e.length) return;
+      if (!confirm("Se suspenden " + e.length + " consulta" + (e.length===1?"":"s") +
+        " de " + nombreLargo(p) + ".\nQuedan registradas como canceladas y las salas se liberan.\n¿Seguir?")) return;
+      e.forEach(c=>{ c.estado = "cancelada"; sello(c); });
+      await persistir(true); cerrar(); render();
+      toast(e.length + " consulta" + (e.length===1?" suspendida":"s suspendidas"));
+    };
+    $("#vElim").onclick = async ()=>{
+      const e = candidatas().filter(c=>marcadas.has(c.id));
+      if (!e.length) return;
+      if (!confirm("Se eliminan " + e.length + " consulta" + (e.length===1?"":"s") +
+        " de " + nombreLargo(p) + ".\nEsto no se puede deshacer.\n¿Seguir?")) return;
+      if (!confirm("Confirmá una vez más: se borran " + e.length + " consulta" + (e.length===1?"":"s") + ".")) return;
+      const ids = new Set(e.map(c=>c.id));
+      e.forEach(c=> tumba(c.id));
+      db.consultas = db.consultas.filter(c=> !ids.has(c.id));
+      await persistir(true); cerrar(); render();
+      toast(e.length + " consulta" + (e.length===1?" eliminada":"s eliminadas"));
+    };
+  }
+
+  abrir(`<h3>Varias consultas</h3>
+    <div class="sub">${esc(nombreLargo(p))} · elegí el período y destildá las que quieras conservar</div>
+    <div id="vBody"></div>`);
+  dibujar();
+}
+
+function sumar90(d){ return sumarDias(d, 90); }
+
+/* ---- resumen de fin de mes para el paciente ---- */
+function resumenMes(pacienteId, mes){
+  const cs = ordenar(db.consultas.filter(c =>
+    c.pacienteId === pacienteId && String(c.fecha).slice(0,7) === mes));
+  const cobradas = cs.filter(seCobra);
+  return {
+    asistidas: cs.filter(c=>c.estado==="asistio").length,
+    faltas: cs.filter(c=>c.estado==="falto").length,
+    faltasCobradas: db.config.cobrarFaltas ? cs.filter(c=>c.estado==="falto").length : 0,
+    cantidad: cobradas.length,
+    total: cobradas.reduce((a,c)=>a+importeDe(c), 0),
+    pendientes: cs.filter(c=>c.estado==="pendiente").length,
+    sinPrecio: cobradas.filter(c=>!importeDe(c)).length,
+    fechas: cobradas.map(c=>corta(c.fecha))
+  };
+}
+
+const claveAviso = (pacienteId, mes) => mes + ":" + pacienteId;
+const avisado = (pacienteId, mes) => !!(db.avisos && db.avisos[claveAviso(pacienteId, mes)]);
+
+function mensajeCierre(pacienteId, mes){
+  const p = paciente(pacienteId);
+  const r = resumenMes(pacienteId, mes);
+  const nom = MESES[+mes.slice(5,7)-1];
+  return String(db.config.plantillaCierre || CONFIG_DEF.plantillaCierre)
+    .replace(/\{nombre\}/g, pilaDe(pacienteId))
+    .replace(/\{nombreCompleto\}/g, nombreLargo(p))
+    .replace(/\{mes\}/g, nom)
+    .replace(/\{anio\}/g, mes.slice(0,4))
+    .replace(/\{cantidad\}/g, r.cantidad)
+    .replace(/\{asistidas\}/g, r.asistidas)
+    .replace(/\{faltas\}/g, r.faltasCobradas)
+    .replace(/\{detalle\}/g, r.fechas.join(", "))
+    .replace(/\{total\}/g, plata(r.total))
+    .replace(/\{arancel\}/g, plata(p && p.arancel ? p.arancel : 0));
+}
+
+function pantallaCierres(mes){
+  const filas = datosMes(mes).filter(r => r.importe || r.asistio);
+  const nom = MESES[+mes.slice(5,7)-1] + " de " + mes.slice(0,4);
+  if (!filas.length){
+    abrir(`<h3>Resúmenes de ${nom}</h3>
+      <div class="ocupadas">No hay consultas cobrables en ese mes.</div>
+      <button class="btn sec" id="cCerrar">Cerrar</button>`);
+    $("#cCerrar").onclick = cerrar;
+    return;
+  }
+  const listos = filas.filter(r=>avisado(r.id, mes)).length;
+  const lista = filas.map(r=>{
+    const p = paciente(r.id);
+    const ok = avisado(r.id, mes);
+    return `<button class="fichaLinea${ok?" hecho":""}" data-cierre="${r.id}">
+      <span class="ini">${esc(inicialesDe(paciente(r.id)) )}</span>
+      <span class="txt"><b>${esc(r.nombre)}</b>
+        <span>${r.asistio} consulta${r.asistio===1?"":"s"}${!p||!p.telefono?" · sin teléfono":""}</span></span>
+      <span class="der"><b class="num plata">${plata(r.importe)}</b>
+        <span>${ok?"enviado":"pendiente"}</span></span>
+    </button>`;
+  }).join("");
+
+  abrir(`<h3>Resúmenes de ${nom}</h3>
+    <div class="sub">${listos} de ${filas.length} enviados. Tocá cada paciente para ver y mandar el mensaje.</div>
+    <div class="listaSel">${lista}</div>
+    <button class="btn sec" id="cCerrar">Cerrar</button>`);
+  $("#cCerrar").onclick = cerrar;
+  document.querySelectorAll("[data-cierre]").forEach(b=>
+    b.addEventListener("click", ()=> avisoCierre(b.dataset.cierre, mes, true)));
+}
+
+function avisoCierre(pacienteId, mes, desdeLista){
+  const p = paciente(pacienteId);
+  if (!p) return;
+  const r = resumenMes(pacienteId, mes);
+  const nom = MESES[+mes.slice(5,7)-1];
+  const texto = mensajeCierre(pacienteId, mes);
+  const tel = p.telefono ? telWhatsApp(p.telefono) : "";
+  const link = tel ? "https://wa.me/"+tel+"?text="+encodeURIComponent(texto) : "";
+  const ok = avisado(pacienteId, mes);
+
+  const alertas = [];
+  if (r.pendientes) alertas.push(r.pendientes+" consulta"+(r.pendientes===1?"":"s")+" de ese mes sigue"+(r.pendientes===1?"":"n")+" sin marcar, así que el total puede estar incompleto.");
+  if (r.sinPrecio) alertas.push(r.sinPrecio+" consulta"+(r.sinPrecio===1?"":"s")+" sin importe cargado.");
+
+  abrir(`<h3>Resumen de ${esc(nom)}</h3>
+    <div class="sub">${esc(nombreLargo(p))} · ${r.asistidas} asistida${r.asistidas===1?"":"s"}${
+      r.faltasCobradas?" · "+r.faltasCobradas+" falta"+(r.faltasCobradas===1?"":"s")+" cobrada"+(r.faltasCobradas===1?"":"s"):""} · ${plata(r.total)}</div>
+    ${alertas.length?`<div class="aviso">${alertas.map(esc).join("<br>")}</div>`:""}
+    <label>Mensaje</label>
+    <div class="previo">${esc(texto)}</div>
+    ${link
+      ? `<a class="btn" href="${link}" target="_blank" rel="noopener" id="cWA">Enviar por WhatsApp</a>`
+      : `<div class="ocupadas">Este paciente no tiene teléfono cargado. Podés copiar el mensaje y mandarlo por otra vía.</div>`}
+    <button class="btn sec" id="cCopiar">Copiar el mensaje</button>
+    <button class="btn sec" id="cMarcar">${ok?"Marcar como no enviado":"Marcar como enviado"}</button>
+    <button class="btn sec" id="cVolver">${desdeLista?"Volver a la lista":"Cerrar"}</button>`);
+
+  async function marcar(v){
+    if (v) db.avisos[claveAviso(pacienteId, mes)] = Date.now();
+    else delete db.avisos[claveAviso(pacienteId, mes)];
+    await persistir();
+  }
+  if (link) $("#cWA").onclick = async ()=>{
+    await marcar(true);
+    setTimeout(()=> desdeLista ? pantallaCierres(mes) : cerrar(), 700);
+  };
+  $("#cCopiar").onclick = async ()=>{
+    try{ await navigator.clipboard.writeText(texto); toast("Mensaje copiado"); }
+    catch(e){ prompt("Copiá el mensaje:", texto); }
+  };
+  $("#cMarcar").onclick = async ()=>{
+    await marcar(!ok);
+    toast(ok ? "Marcado como no enviado" : "Marcado como enviado");
+    desdeLista ? pantallaCierres(mes) : avisoCierre(pacienteId, mes, false);
+  };
+  $("#cVolver").onclick = ()=> desdeLista ? pantallaCierres(mes) : cerrar();
+}
+
+/* ---- alquiler de salas ---- */
+/* Solo lo usa quien administra el cobro. Se calcula con lo que la planilla
+   compartida ya publica: nunca toca datos de pacientes ajenos. */
+function horasTxt(h){
+  const n = Math.round(h*100)/100;
+  return (Number.isInteger(n) ? String(n) : String(n).replace(".", ",")) ;
+}
+
+function alquilerMes(mes){
+  const precios = db.config.alquiler || {};
+  const porInquilina = new Map();
+  ajenas.forEach(r=>{
+    const cfg = precios[r.propietaria];
+    if (!cfg || !(Number(cfg.precio) > 0)) return;
+    if (String(r.fecha).slice(0,7) !== mes) return;
+    if (r.estado === "cancelada") return;          // cancelar libera la sala
+    if (!porInquilina.has(r.propietaria))
+      porInquilina.set(r.propietaria, {
+        profId: r.propietaria, nombre: r.prof || cfg.nombre || "(sin nombre)",
+        precio: Number(cfg.precio), minutos: 0, reservas: []
+      });
+    const f = porInquilina.get(r.propietaria);
+    f.minutos += Math.max(0, parseInt(r.dur,10) || 0);
+    f.reservas.push({ fecha:r.fecha, hora:r.hora, dur:r.dur, sala:r.sala });
+  });
+  const filas = [...porInquilina.values()].map(f=>{
+    f.horas = f.minutos/60;
+    f.total = Math.round(f.horas * f.precio);
+    f.reservas.sort((a,b)=> (a.fecha+a.hora).localeCompare(b.fecha+b.hora));
+    return f;
+  }).sort((a,b)=> b.total - a.total || a.nombre.localeCompare(b.nombre));
+  return {
+    filas: filas,
+    horas: filas.reduce((a,f)=>a+f.horas, 0),
+    total: filas.reduce((a,f)=>a+f.total, 0),
+    hay: Object.keys(precios).some(k => Number(precios[k] && precios[k].precio) > 0)
+  };
+}
+
+function textoAlquiler(profId, mes){
+  const f = alquilerMes(mes).filas.find(x=>x.profId===profId);
+  const nom = MESES[+mes.slice(5,7)-1] + " de " + mes.slice(0,4);
+  if (!f) return "Alquiler de salas — " + nom + "\nSin horas reservadas.";
+  return "Alquiler de salas — " + nom + "\n" + f.nombre + "\n" +
+    horasTxt(f.horas) + " h reservadas · " + plata(f.precio) + " por hora\n" +
+    "Total: " + plata(f.total) + "\n\n" +
+    f.reservas.map(r =>
+      corta(r.fecha) + " " + diaCorto(r.fecha) + " " + r.hora +
+      " · sala " + salaDe(r.sala).nombre + " · " + durTxt(r.dur)
+    ).join("\n");
+}
+
+function panelAlquiler(mes){
+  if (!esAdministradora()) return "";
+  const a = alquilerMes(mes);
+  if (!a.hay) return "";                 // sin precios cargados, no se dibuja nada
+  const nom = MESES[+mes.slice(5,7)-1] + " de " + mes.slice(0,4);
+
+  let cuerpo;
+  if (a.filas.length){
+    cuerpo = `<table>
+      <thead><tr><th>Inquilina</th><th>Horas</th><th>$/hora</th><th>A cobrar</th></tr></thead>
+      <tbody>${a.filas.map(f=>`<tr class="clicable" data-alq="${esc(f.profId)}">
+        <td>${esc(f.nombre)}</td>
+        <td class="num">${horasTxt(f.horas)}</td>
+        <td class="num plata">${plata(f.precio)}</td>
+        <td class="num plata">${plata(f.total)}</td></tr>`).join("")}</tbody>
+      <tfoot><tr><td>Total</td><td class="num">${horasTxt(a.horas)}</td><td></td>
+        <td class="num plata">${plata(a.total)}</td></tr></tfoot>
+    </table>`;
+  } else if (!Salas.ultima){
+    /* Sin esta distinción, un fallo de sincronización se vería igual que un mes
+       sin uso, y eso en un cálculo de plata lleva a no cobrarle a nadie. */
+    cuerpo = `<div class="aviso">Todavía no se leyeron las reservas de la planilla,
+      así que este cálculo no está completo. Entrá a Ajustes y sincronizá antes de cobrar.</div>`;
+  } else {
+    cuerpo = `<div class="ocupadas">Nadie usó las salas en este mes.</div>`;
+  }
+
+  return `<div class="hoja" style="margin-top:18px">
+    <h3>Alquiler de salas</h3>
+    <div class="periodo">${nom} · se cobran las horas reservadas, salvo las canceladas</div>
+    ${cuerpo}</div>`;
+}
+
+function detalleAlquiler(profId, mes){
+  const f = alquilerMes(mes).filas.find(x=>x.profId===profId);
+  if (!f) return;
+  const nom = MESES[+mes.slice(5,7)-1] + " de " + mes.slice(0,4);
+  const lista = f.reservas.map(r=>`<div class="linea" style="cursor:default">
+      <span class="num">${corta(r.fecha)}</span>
+      <span class="dd">${diaCorto(r.fecha)}</span>
+      <span class="num hh">${esc(r.hora)}</span>
+      <span class="sl"><span class="chipSala s-${salaDe(r.sala).id}">${esc(salaDe(r.sala).nombre)}</span> ${durTxt(r.dur)}</span>
+    </div>`).join("");
+  abrir(`<h3>${esc(f.nombre)}</h3>
+    <div class="sub">${nom} · ${horasTxt(f.horas)} h · ${plata(f.precio)} por hora · <b>${plata(f.total)}</b></div>
+    <label>Reservas cobradas (${f.reservas.length})</label>
+    <div class="listaSel">${lista}</div>
+    <button class="btn" id="qCopiar">Copiar el detalle</button>
+    <button class="btn sec" id="qVolver">Volver</button>`);
+  $("#qCopiar").onclick = async ()=>{
+    const t = textoAlquiler(profId, mes);
+    try{ await navigator.clipboard.writeText(t); toast("Detalle copiado"); }
+    catch(e){ prompt("Copiá el detalle:", t); }
+  };
+  $("#qVolver").onclick = cerrar;
+}
+
+/* ---- cierre de mes ---- */
+function datosMes(mes){
+  const cs = db.consultas.filter(c=>String(c.fecha).slice(0,7)===mes);
+  const mapa = new Map();
+  cs.forEach(c=>{
+    const k = c.pacienteId;
+    if (!mapa.has(k)) mapa.set(k, {id:k, nombre: nombreDe(k), asistio:0, falto:0, pendiente:0, cancelada:0, total:0, importe:0, sinPrecio:0});
+    const r = mapa.get(k);
+    r.total++;
+    if (c.estado==="asistio") r.asistio++;
+    else if (c.estado==="falto") r.falto++;
+    else if (c.estado==="cancelada") r.cancelada++;
+    else r.pendiente++;
+    if (seCobra(c)){
+      const v = importeDe(c);
+      r.importe += v;
+      if (!v) r.sinPrecio++;
+    }
+  });
+  return [...mapa.values()].sort((a,b)=> b.importe-a.importe || b.asistio-a.asistio || a.nombre.localeCompare(b.nombre));
+}
+
+function mesSumar(m, n){
+  const d = new Date(+m.slice(0,4), +m.slice(5,7)-1+n, 1);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+}
+
+function vistaMes(){
+  const filas = datosMes(mesSel);
+  const tot = filas.reduce((a,r)=>({
+    a:a.a+r.asistio, f:a.f+r.falto, p:a.p+r.pendiente, t:a.t+r.total, i:a.i+r.importe
+  }), {a:0,f:0,p:0,t:0,i:0});
+  const nom = MESES[+mesSel.slice(5,7)-1] + " de " + mesSel.slice(0,4);
+  const cobra = !!db.config.cobrarFaltas;
+  const conAlgo = filas.filter(r=>r.asistio || r.falto);
+  const sinPrecio = filas.filter(r=>r.sinPrecio);
+
+  const tabla = filas.length ? `<table>
+      <thead><tr><th>Paciente</th><th>Asist.</th><th>Faltó</th><th>A facturar</th></tr></thead>
+      <tbody>${filas.map(r=>`<tr data-cli="${r.id}" class="clicable">
+        <td>${esc(r.nombre)}${avisado(r.id, mesSel)?' <span class="marca">avisado</span>':""}</td>
+        <td class="num">${r.asistio}</td>
+        <td class="num">${r.falto||"–"}</td>
+        <td class="num plata">${r.importe ? plata(r.importe) : "–"}</td></tr>`).join("")}</tbody>
+      <tfoot><tr><td>Totales</td><td class="num">${tot.a}</td><td class="num">${tot.f}</td><td class="num plata">${plata(tot.i)}</td></tr></tfoot>
+    </table>` : `<div class="vacio"><b>Nada registrado en ${nom}</b>Elegí otro mes o cargá consultas.</div>`;
+
+  const pend = tot.p ? `<div class="aviso">Quedan ${tot.p} consulta${tot.p>1?"s":""} sin marcar en este mes. No se facturan hasta que las cierres.</div>` : "";
+  const falta = sinPrecio.length
+    ? `<div class="aviso">Sin importe cargado: ${sinPrecio.map(r=>esc(r.nombre)).join(", ")}. Cargalo en la ficha del paciente o en cada consulta.</div>` : "";
+
+  const anioAct = new Date().getFullYear();
+  const anios = new Set([anioAct, anioAct+1, +mesSel.slice(0,4)]);
+  db.consultas.forEach(c=> anios.add(+String(c.fecha).slice(0,4)));
+  const listaAnios = [...anios].sort((a,b)=>a-b);
+  const selMes = MESES.map((m,i)=>
+    `<option value="${String(i+1).padStart(2,"0")}" ${+mesSel.slice(5,7)===i+1?"selected":""}>${m}</option>`).join("");
+  const selAnio = listaAnios.map(a=>
+    `<option value="${a}" ${+mesSel.slice(0,4)===a?"selected":""}>${a}</option>`).join("");
+
+  $("#vista").innerHTML = `<h2 class="titulo">Cierre de mes</h2>
+    <div class="diaNav">
+      <button id="mAnt" aria-label="Mes anterior">‹</button>
+      <select id="mMes" aria-label="Mes" style="flex:1">${selMes}</select>
+      <select id="mAnio" aria-label="Año" style="flex:0 0 96px">${selAnio}</select>
+      <button id="mSig" aria-label="Mes siguiente">›</button>
+    </div>
+    <div class="tot">
+      <div><b class="num plata">${plata(tot.i)}</b><span>a facturar</span></div>
+      <div><b class="num">${tot.a}</b><span>consultas asistidas</span></div>
+    </div>
+    ${pend}${falta}
+    <div class="hoja"><h3>Consultas por paciente</h3>
+      <div class="periodo">${nom} · ${cobra ? "se cobran las faltas" : "las faltas no se cobran"}</div>
+      ${tabla}</div>
+    ${panelAlquiler(mesSel)}
+    <button class="btn" id="mAvisos">Enviar resúmenes a los pacientes</button>
+    <button class="btn sec" id="mCopia">Copiar el resumen para mí</button>
+    <button class="btn sec" id="mCsv">Descargar planilla (CSV)</button>`;
+
+  $("#mAnt").onclick = ()=>{ mesSel = mesSumar(mesSel,-1); vistaMes(); };
+  $("#mSig").onclick = ()=>{ mesSel = mesSumar(mesSel, 1); vistaMes(); };
+  $("#mMes").onchange = e=>{ mesSel = mesSel.slice(0,4)+"-"+e.target.value; vistaMes(); };
+  $("#mAnio").onchange = e=>{ mesSel = e.target.value+"-"+mesSel.slice(5,7); vistaMes(); };
+  if ($("#mAvisos")) $("#mAvisos").onclick = ()=> pantallaCierres(mesSel);
+  document.querySelectorAll("[data-alq]").forEach(t=>
+    t.addEventListener("click", ()=> detalleAlquiler(t.dataset.alq, mesSel)));
+  document.querySelectorAll("[data-cli]").forEach(t=>
+    t.addEventListener("click", ()=> avisoCierre(t.dataset.cli, mesSel, false)));
+  $("#mCopia").onclick = async ()=>{
+    const txt = "Consultas de "+nom+"\n\n" + (conAlgo.length
+      ? conAlgo.map(r=>{
+          const detalle = r.asistio + " consulta" + (r.asistio===1?"":"s")
+            + (r.falto ? " · " + r.falto + " falta" + (r.falto===1?"":"s") : "");
+          return r.nombre + ": " + detalle + (r.importe ? " — " + plata(r.importe) : "");
+        }).join("\n") + "\n\nTotal a facturar: " + plata(tot.i) + " (" + tot.a + " consultas en " + conAlgo.length + " pacientes)."
+      : "Sin registros.");
+    try{ await navigator.clipboard.writeText(txt); toast("Resumen copiado"); }
+    catch(e){ prompt("Copiá el resumen:", txt); }
+  };
+  $("#mCsv").onclick = ()=>{
+    const csv = "\uFEFF" + ["Paciente;Asistio;Falto;Pendiente;Cancelada;Agendadas;A facturar"]
+      .concat(filas.map(r=>[r.nombre,r.asistio,r.falto,r.pendiente,r.cancelada,r.total,r.importe].join(";")))
+      .concat(["Totales;"+tot.a+";"+tot.f+";"+tot.p+";"+filas.reduce((a,r)=>a+r.cancelada,0)+";"+tot.t+";"+tot.i]).join("\n");
+    bajar(csv, "consultas-"+mesSel+".csv", "text/csv");
+  };
+}
+
+const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const instalada = () => (window.matchMedia && matchMedia("(display-mode: standalone)").matches) ||
+  navigator.standalone === true;
+
+async function bajar(texto, nombre, tipo){
+  const blob = new Blob([texto], {type: tipo+";charset=utf-8"});
+  // En iOS la descarga directa falla o se pierde, sobre todo con la app instalada:
+  // se usa la hoja de compartir, que deja guardar en Archivos o mandarlo por mail.
+  if (esIOS && navigator.canShare){
+    try{
+      const f = new File([blob], nombre, {type: tipo});
+      if (navigator.canShare({files:[f]})){
+        await navigator.share({files:[f], title: nombre});
+        return;
+      }
+    }catch(e){
+      if (e && e.name === "AbortError") return;   // el usuario cerró la hoja
+    }
+  }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = nombre;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  toast("Archivo generado");
+}
+
+/* ---- ajustes ---- */
+function seccionAlquiler(){
+  const guardados = db.config.alquiler || {};
+  /* Se listan las profesionales vistas en la planilla más las que ya tengan
+     precio, para no perder a alguien que este mes no reservó nada. */
+  const vistas = new Map();
+  ajenas.forEach(r=>{ if (r.propietaria) vistas.set(r.propietaria, r.prof || "(sin nombre)"); });
+  Object.keys(guardados).forEach(k=>{
+    if (!vistas.has(k)) vistas.set(k, (guardados[k] && guardados[k].nombre) || "(sin nombre)");
+  });
+
+  if (!vistas.size){
+    return `<div class="ocupadas">Todavía no llegaron reservas de otras psicólogas.
+      Sincronizá la planilla y volvé acá.</div>`;
+  }
+  const filas = [...vistas.entries()]
+    .sort((a,b)=> a[1].localeCompare(b[1]))
+    .map(([id,nom])=>{
+      const p = guardados[id] && Number(guardados[id].precio) ? guardados[id].precio : "";
+      return `<label for="pr_${esc(id)}">${esc(nom)}</label>
+        <input type="number" id="pr_${esc(id)}" inputmode="numeric" min="0" step="1"
+          data-precio="${esc(id)}" data-nombre="${esc(nom)}" value="${esc(p)}"
+          placeholder="precio por hora en ${esc(db.config.moneda||"$")}">`;
+    }).join("");
+  return filas + `<button class="btn" id="aAlqG">Guardar precios</button>
+    <div class="sub" style="margin-top:10px">Quien no tenga precio cargado no se factura.
+    Estos precios quedan solo en tu Drive: las demás no los ven.</div>`;
+}
+
+function diagnostico(){
+  const id = db.config.driveId || "";
+  const corto = id ? (id.slice(0,14) + "…" + id.slice(-28) + "  (" + id.length + " caracteres)") : "(vacío)";
+  const mal = revisarClienteId(id);
+  const inst = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) ||
+               navigator.standalone === true;
+  const ua = navigator.userAgent || "";
+  const dentroDeApp = /FBAN|FBAV|Instagram|Line\/|WhatsApp|; wv\)/.test(ua);
+  const L = [];
+  L.push("— Diagnóstico de la agenda —");
+  L.push("Origen: " + (location.origin || (location.protocol + "//" + location.host)));
+  L.push("Dirección: " + location.href.split("?")[0]);
+  L.push("Instalada como app: " + (inst ? "sí" : "no (pestaña del navegador)"));
+  L.push("Navegador embebido: " + (dentroDeApp ? "SÍ — abrila en Chrome o Safari, Google bloquea estos" : "no"));
+  L.push("ID de cliente: " + corto);
+  L.push("ID fijado en el archivo: " + (CONSULTORIO.clienteId ? "sí" : "no"));
+  L.push("Revisión del ID: " + (mal || "formato correcto"));
+  L.push("ID de planilla: " + (db.config.hojaId ? db.config.hojaId.slice(0,10)+"… ("+db.config.hojaId.length+")" : "(vacío)"));
+  L.push("Nombre profesional: " + (db.config.profNombre || "(sin cargar)"));
+  L.push("Tu identificador: " + (db.config.profId || "(sin generar)"));
+  /* Este aviso aparece solo mientras la lista está vacía, es decir durante la
+     puesta a punto. Una vez cargado un identificador, deja de mostrarse: así
+     el estado no queda mudo, pero tampoco queda un cartel permanente. */
+  if (!(CONSULTORIO.administradoras || []).length)
+    L.push("Alquiler de salas: sin configurar — para verlo, agregá el identificador de arriba a `administradoras` en index.html");
+  else if (esAdministradora())
+    L.push("Alquiler de salas: activo");
+  L.push("Librería de Google cargada: " + (window.google && google.accounts ? "sí" : "NO"));
+  if (!Sync.token) Sync.recuperarToken();
+  L.push("Sesión de Google: " + (Sync.token && Date.now() < Sync.expira
+    ? "activa hasta las " + new Date(Sync.expira).toTimeString().slice(0,5)
+    : "sin token (va a pedir la cuenta)"));
+  L.push("Drive: " + Sync.texto() + (Sync.detalle ? " · " + Sync.detalle : "") +
+    (Sync.corriendo ? " (corriendo hace " + Math.round((Date.now()-(Sync.desde||Date.now()))/1000) + " s)" : ""));
+  L.push("Planilla: " + (Salas.detalle || (Salas.ultima ? "al día" : "sin sincronizar")));
+  L.push("Datos: " + db.pacientes.length + " pacientes, " + db.consultas.length + " consultas");
+  L.push("Navegador: " + ua.slice(0,110));
+  return L.join("\n");
+}
+
+function vistaAjustes(){
+  const opsPaso = [15,20,30,60].map(m=>`<option value="${m}" ${(parseInt(db.config.paso,10)||30)===m?"selected":""}>${durTxt(m)}</option>`).join("");
+  const opsDur = [15,20,30,45,60,90,120].map(m=>`<option value="${m}" ${(parseInt(db.config.duracion,10)||60)===m?"selected":""}>${durTxt(m)}</option>`).join("");
+  $("#vista").innerHTML = `<h2 class="titulo">Ajustes</h2>
+    <div class="hoja">
+      <h3>Horario de atención</h3>
+      <div class="periodo">Define la grilla de la vista Día.</div>
+      <div class="dosCol">
+        <div><label for="aIni">Desde</label><input type="time" id="aIni" value="${esc(db.config.horaInicio)}"></div>
+        <div><label for="aFin">Hasta</label><input type="time" id="aFin" value="${esc(db.config.horaFin)}"></div>
+      </div>
+      <div class="dosCol">
+        <div><label for="aPaso">Franjas de</label><select id="aPaso">${opsPaso}</select></div>
+        <div><label for="aDur">Duración típica</label><select id="aDur">${opsDur}</select></div>
+      </div>
+      <button class="btn" id="aGuardarH">Guardar horario</button>
+    </div>
+    <div class="hoja" style="margin-top:14px">
+      <h3>Cobros</h3>
+      <div class="periodo">Cómo se arma el total del cierre mensual.</div>
+      <label for="aMon">Símbolo de moneda</label>
+      <input type="text" id="aMon" value="${esc(db.config.moneda||"$")}" maxlength="4">
+      <label class="check"><input type="checkbox" id="aFaltas" ${db.config.cobrarFaltas?"checked":""}> Cobrar también las consultas a las que el paciente faltó</label>
+      <button class="btn" id="aGuardarC">Guardar cobros</button>
+    </div>
+    <div class="hoja" style="margin-top:14px">
+      <label for="aCc">Código de país para WhatsApp</label>
+      <input type="text" id="aCc" value="${esc(db.config.codigoPais)}" inputmode="numeric">
+      <label for="aPla">Mensaje de recordatorio</label>
+      <textarea id="aPla" style="min-height:110px">${esc(db.config.plantilla)}</textarea>
+      <label for="aPlaC">Mensaje de cambio de cita</label>
+      <textarea id="aPlaC" style="min-height:110px">${esc(db.config.plantillaCambio)}</textarea>
+      <div class="sub" style="margin:8px 0 0">En los dos de arriba podés usar {nombre}, {nombreCompleto}, {dia}, {fecha} y {hora}.</div>
+      <label for="aPlaR">Mensaje de resumen de fin de mes</label>
+      <textarea id="aPlaR" style="min-height:120px">${esc(db.config.plantillaCierre)}</textarea>
+      <div class="sub" style="margin:8px 0 0">Acá podés usar {nombre}, {nombreCompleto}, {mes}, {anio}, {cantidad}, {asistidas}, {faltas}, {detalle}, {arancel} y {total}.</div>
+      <button class="btn" id="aGuardar">Guardar mensajes</button>
+    </div>
+    <h2 class="titulo" style="margin-top:22px">Consultorio compartido</h2>
+    <div class="sub">Tu nombre y la planilla que ven todas las psicólogas.</div>
+    <div class="hoja">
+      <label for="aProf">Tu nombre profesional</label>
+      <input type="text" id="aProf" value="${esc(db.config.profNombre||"")}" placeholder="Ej. Lucía Fernández">
+      <div class="sub" style="margin:6px 0 0">Es lo único que ven las demás en tus horas reservadas.</div>
+      <label for="aHoja">ID de la planilla compartida</label>
+      <input type="text" id="aHoja" value="${esc(db.config.hojaId||"")}" placeholder="1AbC...xyz" autocomplete="off" spellcheck="false">
+      <label for="aSala">Sala que usás más seguido</label>
+      <select id="aSala">${SALAS.map(x=>`<option value="${x.id}" ${(db.config.salaDef||"naranja")===x.id?"selected":""}>${x.nombre}</option>`).join("")}</select>
+      <button class="btn" id="aEqG">Guardar</button>
+      ${Salas.detalle
+        ? `<div class="aviso" style="margin-top:10px"><b>La planilla no sincronizó.</b><br>${esc(Salas.detalle)}</div>
+           <button class="btn sec" id="aSalasR">Reintentar la planilla</button>`
+        : `<div class="ocupadas" style="margin-top:10px">Reservas de las demás: <b>${ajenas.length}</b> cargadas${Salas.ultima?" · al día":""}</div>`}
+    </div>
+
+    ${esAdministradora() ? `<h2 class="titulo" style="margin-top:22px">Alquiler de salas</h2>
+    <div class="sub">Precio por hora de cada inquilina. Queda solo en tu Drive.</div>
+    <div class="hoja">${seccionAlquiler()}</div>` : ""}
+
+    <h2 class="titulo" style="margin-top:22px">Sincronizar con Google Drive</h2>
+    <div class="sub">Para usar la misma agenda en el celular y en la PC.</div>
+    <div class="hoja">
+      <div id="sincCaja">${Sync.cajaHTML()}</div>
+      <label for="aDrv">ID de cliente de Google (OAuth)</label>
+      <input type="text" id="aDrv" value="${esc(db.config.driveId||"")}" placeholder="000000-xxxx.apps.googleusercontent.com" autocomplete="off" spellcheck="false">
+      <div class="sub" style="margin:6px 0 0">Lo sacás de tu propio proyecto en Google Cloud. Está explicado en el instructivo que viene con la app.</div>
+      <button class="btn" id="aDrvG">Guardar y conectar</button>
+      <button class="btn sec" id="aSinc">Sincronizar ahora</button>
+      ${db.config.driveId?`<button class="btn sec" id="aDrvOff">Desconectar Drive</button>`:""}
+    </div>
+
+    <h2 class="titulo" style="margin-top:22px">Copia de seguridad</h2>    <div class="sub">Los datos viven solamente en este teléfono. Guardá una copia cada tanto.</div>
+    <button class="btn sec" id="aExp">Exportar todo a un archivo</button>
+    <button class="btn sec" id="aImp">Restaurar desde un archivo</button>
+    <input type="file" id="aFile" accept="application/json,.json" hidden>
+    <button class="btn peligro" id="aBorrar" style="margin-top:22px">Borrar todos los datos</button>
+    <h2 class="titulo" style="margin-top:22px">Diagnóstico</h2>
+    <div class="sub">Si algo falla, mandá esto a quien administra la app.</div>
+    <div class="hoja">
+      <div class="diag">${esc(diagnostico())}</div>
+      <button class="btn sec" id="aDiag">Copiar diagnóstico</button>
+    </div>
+
+    <div class="sub" style="margin-top:18px;text-align:center">${db.pacientes.length} pacientes · ${db.consultas.length} consultas</div>`;
+
+  $("#aGuardarH").onclick = async ()=>{
+    const i = $("#aIni").value || "08:00", f = $("#aFin").value || "20:00";
+    if (minutos(f) <= minutos(i)){ toast("La hora final tiene que ser mayor"); return; }
+    db.config.horaInicio = i;
+    db.config.horaFin = f;
+    db.config.paso = parseInt($("#aPaso").value,10) || 30;
+    db.config.duracion = parseInt($("#aDur").value,10) || 60;
+    selloConfig();
+    await persistir(); toast("Horario guardado"); vistaAjustes();
+  };
+  $("#aGuardarC").onclick = async ()=>{
+    db.config.moneda = $("#aMon").value.trim() || "$";
+    db.config.cobrarFaltas = $("#aFaltas").checked;
+    selloConfig();
+    await persistir(); toast("Cobros guardados"); vistaAjustes();
+  };
+  $("#aGuardar").onclick = async ()=>{
+    db.config.codigoPais = $("#aCc").value.replace(/\D/g,"") || "598";
+    db.config.plantilla = $("#aPla").value.trim() || CONFIG_DEF.plantilla;
+    db.config.plantillaCambio = $("#aPlaC").value.trim() || CONFIG_DEF.plantillaCambio;
+    db.config.plantillaCierre = $("#aPlaR").value.trim() || CONFIG_DEF.plantillaCierre;
+    selloConfig();
+    await persistir(); toast("Mensajes guardados"); vistaAjustes();
+  };
+  document.querySelectorAll("[data-precio]").forEach(i=> i.addEventListener("change", ()=>{}));
+  if ($("#aAlqG")) $("#aAlqG").onclick = async ()=>{
+    const nuevo = {};
+    document.querySelectorAll("[data-precio]").forEach(i=>{
+      const v = parseInt(i.value,10) || 0;
+      nuevo[i.dataset.precio] = { nombre: i.dataset.nombre || "", precio: v };
+    });
+    db.config.alquiler = nuevo;
+    selloConfig();
+    await persistir();
+    toast("Precios guardados");
+    vistaAjustes();
+  };
+  $("#aEqG").onclick = async ()=>{
+    db.config.profNombre = $("#aProf").value.trim();
+    db.config.hojaId = $("#aHoja").value.trim().replace(/^.*\/d\/([^/]+).*$/, "$1");
+    const malH = revisarHojaId(db.config.hojaId);
+    if (malH){ toast(malH); }
+    db.config.salaDef = $("#aSala").value || "naranja";
+    selloConfig();
+    await persistir();
+    if (db.config.hojaId && !db.config.profNombre) toast("Cargá tu nombre para que las demás sepan de quién es la hora");
+    else toast("Guardado");
+    vistaAjustes();
+    Salas.correr(false).then(()=> vistaAjustes());
+  };
+  if ($("#aSalasR")) $("#aSalasR").onclick = ()=>{
+    Salas.fallos = 0; Sync.silencioUsado = false;
+    Salas.correr(true).then(()=> vistaAjustes());
+  };
+  $("#aDrvG").onclick = ()=>{
+    const id = $("#aDrv").value.trim();
+    const mal = id ? revisarClienteId(id) : "";
+    if (mal && !confirm(mal + "\n\n¿Guardar igual?")) return;
+    db.config.driveId = id;
+    selloConfig();
+    Sync.olvidarToken(); Sync.fileId = null; Sync.cliente = null; Sync.ultima = 0;
+    Store.guardar(db);   // sin await: un await acá rompe el gesto y Safari bloquea la ventana de Google
+    if (!id){ Sync.marcar("off"); vistaAjustes(); toast("Drive desconectado"); return; }
+    Sync.correr(true, true).then(()=> vistaAjustes());   // conexión inicial: pide permisos
+  };
+  $("#aSinc").onclick = ()=>{
+    if (!db.config.driveId){ toast("Primero cargá el ID de cliente"); return; }
+    Sync.fallos = 0; Salas.fallos = 0; Sync.silencioUsado = false;
+    Sync.corriendo = false; Salas.corriendo = false;   // por si quedó algo colgado
+    Sync.correr(true)
+      .then(()=> db.config.hojaId ? Salas.correr(false) : null)
+      .then(()=> vistaAjustes());
+  };
+  if ($("#aDrvOff")) $("#aDrvOff").onclick = async ()=>{
+    if (!confirm("Se deja de sincronizar. Los datos siguen en este dispositivo y en Drive. ¿Seguir?")) return;
+    db.config.driveId = ""; selloConfig();
+    Sync.olvidarToken(); Sync.fileId = null; Sync.cliente = null; Sync.ultima = 0;
+    Sync.marcar("off");
+    await Store.guardar(db); vistaAjustes(); toast("Drive desconectado");
+  };
+  $("#aDiag").onclick = async ()=>{
+    try{ await navigator.clipboard.writeText(diagnostico()); toast("Diagnóstico copiado"); }
+    catch(e){ prompt("Copiá esto:", diagnostico()); }
+  };
+  $("#aExp").onclick = ()=> bajar(JSON.stringify(db,null,2), "respaldo-consultorio-"+hoyISO()+".json", "application/json");
+  $("#aImp").onclick = ()=> $("#aFile").click();
+  $("#aFile").onchange = e=>{
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = async ()=>{
+      try{
+        const d = JSON.parse(r.result);
+        if (!d || !Array.isArray(d.pacientes) || !Array.isArray(d.consultas)) throw new Error("formato");
+        if (!confirm("Se reemplazan los datos actuales por los del archivo. ¿Seguir?")) return;
+        const viejos = db.pacientes.map(x=>x.id).concat(db.consultas.map(x=>x.id));
+        const nuevos = new Set(d.pacientes.map(x=>x.id).concat(d.consultas.map(x=>x.id)));
+        db = {
+          pacientes: d.pacientes.map(sello), consultas: d.consultas.map(sello),
+          config: Object.assign({}, CONFIG_DEF, d.config||{}),
+          configMod: Date.now(), borrados: Object.assign({}, db.borrados),
+          /* Sin esto `avisos` quedaba sin definir tras importar y la pantalla
+             de resúmenes mensuales rompía al marcar un envío. */
+          avisos: Object.assign({}, db.avisos, d.avisos || {})
+        };
+        viejos.forEach(id=>{ if (!nuevos.has(id)) tumba(id); });
+        await persistir(true); render(); toast("Datos restaurados");
+      }catch(err){ alert("El archivo no tiene el formato esperado. Usá uno exportado desde esta app."); }
+    };
+    r.readAsText(f);
+  };
+  $("#aBorrar").onclick = async ()=>{
+    if (!confirm("Se borran todos los pacientes y consultas de este teléfono. ¿Seguir?")) return;
+    if (!confirm("Confirmá una vez más: esto no se puede deshacer.")) return;
+    db.pacientes.concat(db.consultas).forEach(x=> tumba(x.id));
+    db = {
+      pacientes:[], consultas:[], config:Object.assign({},CONFIG_DEF, {driveId: db.config.driveId||""}),
+      configMod: Date.now(), borrados: db.borrados
+    };
+    await persistir(true); render(); toast("Datos borrados");
+  };
+}
+
+/* ============ arranque ============ */
+(async function init(){
+  const d = new Date();
+  $("#hoyTexto").textContent = DIAS[d.getDay()]+" "+d.getDate()+" de "+MESES[d.getMonth()];
+  const guardado = await Store.cargar();
+  db = {
+    pacientes: (guardado && guardado.pacientes) || [],
+    consultas: (guardado && guardado.consultas) || [],
+    config: Object.assign({}, CONFIG_DEF, (guardado && guardado.config) || {}),
+    configMod: (guardado && guardado.configMod) || 0,
+    borrados: (guardado && guardado.borrados) || {},
+    avisos: (guardado && guardado.avisos) || {}
+  };
+  // Los códigos del bloque CONSULTORIO mandan sobre lo guardado: así, si se
+  // corrigen en el archivo, se corrigen en todos los dispositivos al recargar.
+  if (CONSULTORIO.clienteId && db.config.driveId !== CONSULTORIO.clienteId){
+    db.config.driveId = CONSULTORIO.clienteId; selloConfig();
+  }
+  if (CONSULTORIO.hojaId && db.config.hojaId !== CONSULTORIO.hojaId){
+    db.config.hojaId = CONSULTORIO.hojaId; selloConfig();
+  }
+  /* Los pacientes cargados antes de separar los campos tienen el nombre entero
+     en `nombre`. Se parte una sola vez: el primer término queda de nombre y el
+     resto de apellido. Si quedó mal, se corrige en la ficha. */
+  let migrados = 0;
+  db.pacientes.forEach(p=>{
+    if (p.apellido === undefined){
+      const partes = String(p.nombre||"").trim().split(/\s+/);
+      p.nombre = partes.shift() || "";
+      p.apellido = partes.join(" ");
+      sello(p); migrados++;
+    }
+  });
+  if (migrados) await Store.guardar(db);
+
+  if (!db.config.profId){
+    db.config.profId = nuevoId() + nuevoId();
+    selloConfig();
+    await Store.guardar(db);
+  }
+  render();
+  Sync.marcar(db.config.driveId ? "listo" : "off");
+
+  // Tocar el estado del encabezado reconecta (el toque es lo que
+  // permite abrir la ventana de Google en Safari) o lleva a Ajustes.
+  $("#sincEstado").addEventListener("click", ()=>{
+    if (Sync.activo()){
+      Sync.corriendo = false; Salas.corriendo = false;   // destraba si quedó colgado
+      Sync.fallos = 0; Salas.fallos = 0; Sync.silencioUsado = false;
+      Sync.correr(true).then(()=> db.config.hojaId ? Salas.correr(false) : null);
+      return;
+    }
+    irA("ajustes"); window.scrollTo(0,0); render();
+  });
+
+  if (db.config.driveId) setTimeout(()=> Sync.correr(false), 800);
+  if (db.config.hojaId) setTimeout(()=> Salas.correr(false), 1600);
+  if ("serviceWorker" in navigator && location.protocol.startsWith("http")){
+    navigator.serviceWorker.register("sw.js").catch(()=>{});
+  }
+})();
+</script>
+</body>
+</html>
