@@ -275,6 +275,22 @@ que lee estos mismos datos y los muestra por semana y por mes.
 reescribe: los cambios manuales se pierden y podés desordenar reservas de
 otras. Si hay que corregir algo, se hace desde la app.
 
+### La pestaña Calendario
+
+Tiene tres modos, con el selector de arriba:
+
+- **Día**: las dos salas lado a lado, con los huecos libres tocables para
+  reservar. Es la vista para agendar.
+- **Semana**: tus siete días con el nombre de cada paciente. El color indica la
+  sala (naranja o azul) y la barra lateral el estado. Las canceladas van
+  tachadas. Tocá un bloque para abrir la consulta, o el número de un día para
+  verlo completo.
+- **Mes**: el mes entero con hora y nombre de cada consulta.
+
+**Semana y Mes muestran solo tus consultas, con nombre y todo.** Para ver las
+horas de las demás psicólogas está *Horario general*, que nunca muestra
+pacientes de nadie.
+
 ### Nombre y apellido de los pacientes
 
 Se cargan en campos separados. Los mensajes automáticos —recordatorio, cambio

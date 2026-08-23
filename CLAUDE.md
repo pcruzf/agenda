@@ -46,6 +46,30 @@ vieja.
 
 ---
 
+## Versión de prueba (`beta/`)
+
+`pcruzf.github.io/agenda/beta/` es una copia para probar antes de desplegar.
+Mismo origen que producción, así que **el almacenamiento sería compartido**: la
+copia debe cambiar SIEMPRE estas cinco claves, o pisa los datos reales.
+
+| | Producción | `beta/` |
+|---|---|---|
+| `CLAVE` (localStorage) | `agenda_consultorio_v1` | `agenda_consultorio_PRUEBA` |
+| `ARCHIVO` (Drive) | `agenda-consultorio.json` | `agenda-consultorio-PRUEBA.json` |
+| `CLAVE_TOKEN` | `agenda_sesion_google` | `agenda_sesion_google_PRUEBA` |
+| `CONSULTORIO.hojaId` | la planilla real | `""` (no publica nada) |
+| `CACHE` en `sw.js` | `agenda-vN` | `beta-vN` |
+
+Más el cartel `.cartelPrueba` y el título, para que sea imposible confundirlas.
+
+El `activate` del service worker borra solo las cachés **de su propio prefijo**
+(`CACHE.split("-")[0]`). Antes borraba todas las del dominio, así que
+producción y beta se destruían el caché mutuamente. No volver a `k !== CACHE`.
+
+Instrucciones para el usuario: `COMO-PROBAR.md`.
+
+---
+
 ## Configuración
 
 Bloque `CONSULTORIO` al inicio del `<script>` de ambos HTML. Valores fijados en
@@ -247,7 +271,14 @@ un token válido, se reintentaba cada 5 s, indefinidamente. **Reglas actuales:**
 ## Estructura de la interfaz (`index.html`)
 
 `render()` despacha según la variable global `tab` a: `vistaAgenda()`,
-`vistaDia()`, `vistaPacientes()`, `vistaMes()`, `vistaAjustes()`. La pestaña
+`vistaCalendario()`, `vistaPacientes()`, `vistaMes()`, `vistaAjustes()`.
+
+La pestaña **Calendario** tiene tres modos (`modoCal`): `dia` (dos salas lado a
+lado, con huecos tocables para reservar — es la herramienta de agendado),
+`semana` y `mes`. Estos dos últimos muestran **solo `db.consultas`**, con el
+nombre del paciente: son la versión privada del tablero. Nunca leen `ajenas`;
+para ver a las demás está Horario general. Clases con prefijo `k` (`kB`,
+`kCel`, `kEv`…) para no chocar con las del tablero ni con las del día. La pestaña
 *Horario general* es un `<a href="tablero.html">`, **sin `target="_blank"`**
 (con `_blank` el botón atrás de Android cerraba la app entera).
 

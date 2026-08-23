@@ -7,8 +7,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="PRUEBA">
-<title>PRUEBA · Agenda de consultorio</title>
+<meta name="apple-mobile-web-app-title" content="Consultorio">
+<title>Agenda de consultorio</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
@@ -254,15 +254,6 @@ nav button[aria-current="page"]{color:var(--pine);font-weight:600}
 .slot.sigue.falto .z{border-left-color:var(--no)}
 .ocupadas{font-size:13px;color:var(--ink-soft);background:#F4F7F5;border-radius:10px;padding:9px 11px;margin-top:8px;line-height:1.5}
 .ocupadas b{color:var(--ink);font-weight:600}
-
-/* ---------- cartel de la versión de prueba ---------- */
-.cartelPrueba{
-  background:#8A3D12;color:#fff;text-align:center;font-size:11.5px;font-weight:600;
-  letter-spacing:.5px;text-transform:uppercase;padding:6px 10px;
-  padding-top:calc(6px + env(safe-area-inset-top));position:relative;z-index:60;
-}
-body.esPrueba header{padding-top:14px}
-@media (min-width:900px){ body.esPrueba{padding-left:0} }
 
 /* ---------- calendario propio: semana y mes ---------- */
 .kModo{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:12px}
@@ -516,12 +507,10 @@ input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{
 }
 </style>
 </head>
-<body class="esPrueba">
-
-<div class="cartelPrueba">VERSIÓN DE PRUEBA · los datos no son los reales</div>
+<body>
 
 <header>
-  <h1>Agenda · prueba</h1>
+  <h1>Agenda de consultorio</h1>
   <div class="fecha"><span id="hoyTexto"></span> · <button id="sincEstado" class="sincBtn">solo en este equipo</button></div>
 </header>
 
@@ -558,10 +547,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{
    ========================================================================== */
 const CONSULTORIO = {
   clienteId: "502751961059-7f8nr0fsnbfgccvae0td1qshs0dihkle.apps.googleusercontent.com",
-  /* VACÍO A PROPÓSITO: sin planilla, la versión de prueba no publica reservas
-     que verían las demás psicólogas. Si querés probar el consultorio
-     compartido, creá una planilla aparte y pegá su ID acá — nunca la real. */
-  hojaId:    "",
+  hojaId:    "1gs_xYxJKDtrOfpZ6r1eUWm-9GKdJNP6n_gOiEZrlVB8",
 
   /* Identificadores de quienes administran el cobro de las salas. Solo a ellas
      les aparece el módulo de alquiler; a las inquilinas no se les dibuja nada.
@@ -578,7 +564,7 @@ function esAdministradora(){
 }
 
 /* ============ almacenamiento ============ */
-const CLAVE = "agenda_consultorio_PRUEBA";
+const CLAVE = "agenda_consultorio_v1";
 const Store = {
   async cargar(){
     if (window.storage && window.storage.get){
@@ -669,8 +655,8 @@ async function persistir(urgente){
 }
 
 /* ============ sincronización con Google Drive ============ */
-const ARCHIVO = "agenda-consultorio-PRUEBA.json";
-const CLAVE_TOKEN = "agenda_sesion_google_PRUEBA";
+const ARCHIVO = "agenda-consultorio.json";
+const CLAVE_TOKEN = "agenda_sesion_google";
 const ALCANCE = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets";
 
 function mezclarLista(a, b, borrados){
