@@ -1,7 +1,7 @@
 /* Permite abrir la agenda sin conexión.
    Si cambiás index.html, subí también este archivo con un CACHE nuevo
    (por ejemplo "agenda-v3") para que el celular tome la versión nueva. */
-const CACHE = "agenda-v20";
+const CACHE = "beta-v1";
 const BASE = [ "./", "./index.html", "./tablero.html", "./manifest.json",
                "./icon-180.png", "./icon-192.png", "./icon-512.png" ];
 
@@ -10,9 +10,15 @@ self.addEventListener("install", e => {
 });
 
 self.addEventListener("activate", e => {
+  /* Solo se borran las versiones viejas de ESTE prefijo. Antes borraba todo lo
+     demás del dominio, así que producción y una copia de prueba en otra
+     carpeta se destruían el caché mutuamente. */
+  const PREFIJO = CACHE.split("-")[0] + "-";
   e.waitUntil(
     caches.keys()
-      .then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(ks => Promise.all(ks
+        .filter(k => k.indexOf(PREFIJO) === 0 && k !== CACHE)
+        .map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });

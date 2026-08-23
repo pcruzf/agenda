@@ -7,8 +7,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Consultorio">
-<title>Agenda de consultorio</title>
+<meta name="apple-mobile-web-app-title" content="PRUEBA">
+<title>PRUEBA · Agenda de consultorio</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
@@ -255,6 +255,97 @@ nav button[aria-current="page"]{color:var(--pine);font-weight:600}
 .ocupadas{font-size:13px;color:var(--ink-soft);background:#F4F7F5;border-radius:10px;padding:9px 11px;margin-top:8px;line-height:1.5}
 .ocupadas b{color:var(--ink);font-weight:600}
 
+/* ---------- cartel de la versión de prueba ---------- */
+.cartelPrueba{
+  background:#8A3D12;color:#fff;text-align:center;font-size:11.5px;font-weight:600;
+  letter-spacing:.5px;text-transform:uppercase;padding:6px 10px;
+  padding-top:calc(6px + env(safe-area-inset-top));position:relative;z-index:60;
+}
+body.esPrueba header{padding-top:14px}
+@media (min-width:900px){ body.esPrueba{padding-left:0} }
+
+/* ---------- calendario propio: semana y mes ---------- */
+.kModo{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:12px}
+.kModo button{
+  flex:1;border:0;border-right:1px solid var(--line);background:var(--surface);
+  font-family:inherit;font-size:14px;padding:9px 4px;color:var(--ink-soft);cursor:pointer;
+}
+.kModo button:last-child{border-right:0}
+.kModo button[aria-pressed="true"]{background:var(--pine);color:#fff;font-weight:600}
+
+.kMarco{background:var(--surface);border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(11,61,51,.07)}
+.kScroll{overflow-x:auto;scrollbar-width:thin}
+.kRej{min-width:calc(44px + var(--kcols) * 92px)}
+.kEnc{display:grid;grid-template-columns:44px repeat(var(--kcols),1fr);border-bottom:1px solid var(--line)}
+.kEnc .kEsq{border-right:1px solid var(--line);background:#F4F7F5}
+.kEnc .kD{
+  text-align:center;padding:6px 2px 7px;border-right:1px solid var(--hair);
+  background:#F4F7F5;cursor:pointer;
+}
+.kEnc .kD:last-child{border-right:0}
+.kEnc .kD .kSem{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-soft)}
+.kEnc .kD .kFec{font-size:15px;font-weight:600;letter-spacing:-.3px}
+.kEnc .kD.kHoy{background:#FBF3E0}
+.kEnc .kD.kHoy .kFec{color:#8A6A16}
+.kEnc .kD.kFinde .kSem, .kEnc .kD.kFinde .kFec{color:#9AA8A4}
+.kCuerpo{display:grid;grid-template-columns:44px repeat(var(--kcols),1fr)}
+.kHoras{border-right:1px solid var(--line);background:#F4F7F5}
+.kHoras div{
+  height:calc(var(--kfila) * 2);font-size:10.5px;color:var(--ink-soft);
+  text-align:right;padding:2px 5px 0 0;border-bottom:1px solid var(--hair);
+}
+.kCol{
+  position:relative;border-right:1px solid var(--hair);
+  background:repeating-linear-gradient(to bottom, transparent 0,
+    transparent calc(var(--kfila) * 2 - 1px),
+    var(--hair) calc(var(--kfila) * 2 - 1px), var(--hair) calc(var(--kfila) * 2));
+}
+.kCol:last-child{border-right:0}
+.kCol.kFinde{background-color:#FAFBFB}
+.kCol.kHoy{background-color:#FEFCF6}
+.kB{
+  position:absolute;left:2px;right:2px;border-radius:5px;padding:2px 5px;
+  overflow:hidden;font-size:11px;line-height:1.2;cursor:pointer;
+}
+.kB b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kB span{font-size:10px;color:var(--ink-soft)}
+.kB.s-naranja{background:#FBF0E2;box-shadow:inset 3px 0 0 #C96A17}
+.kB.s-azul{background:#E7EEF7;box-shadow:inset 3px 0 0 #2A6099}
+.kB.asistio{box-shadow:inset 3px 0 0 var(--ok)}
+.kB.falto{box-shadow:inset 3px 0 0 var(--no)}
+.kB.cancelada{opacity:.5}
+.kB.cancelada b{text-decoration:line-through}
+
+.kMes{background:var(--surface);border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(11,61,51,.07)}
+.kMesCab{display:grid;grid-template-columns:repeat(7,1fr);background:#F4F7F5;border-bottom:1px solid var(--line)}
+.kMesCab div{
+  text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:.6px;
+  color:var(--ink-soft);padding:7px 1px;font-weight:600;
+}
+.kMesRej{display:grid;grid-template-columns:repeat(7,1fr)}
+.kCel{
+  min-height:84px;border-right:1px solid var(--hair);border-bottom:1px solid var(--hair);
+  padding:5px 5px 7px;cursor:pointer;
+}
+.kCel:nth-child(7n){border-right:0}
+.kCel.kFuera{background:#FAFBFB}
+.kCel.kFuera .kN{color:#BAC5C1}
+.kCel.kHoy{background:#FEFCF6}
+.kCel .kN{font-size:12.5px;font-weight:600;color:var(--ink-soft)}
+.kCel.kHoy .kN{color:#8A6A16}
+.kEv{
+  font-size:10px;border-radius:3px;padding:1px 4px;margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.kEv.s-naranja{background:#FBF0E2;color:#8A5410}
+.kEv.s-azul{background:#E7EEF7;color:#24507F}
+.kEv.cancelada{opacity:.5;text-decoration:line-through}
+.kMas{font-size:9.5px;color:var(--ink-soft);padding-left:2px;margin-top:1px}
+@media (max-width:640px){
+  .kCel{min-height:64px;padding:3px 3px 5px}
+  .kEv{font-size:9px;padding:1px 3px}
+}
+
 /* ---------- grilla de dos salas ---------- */
 .cabSalas{display:flex;border-bottom:1px solid var(--line);background:#F4F7F5}
 .cabSalas .h{flex:0 0 52px;border-right:1px solid var(--line)}
@@ -425,10 +516,12 @@ input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{
 }
 </style>
 </head>
-<body>
+<body class="esPrueba">
+
+<div class="cartelPrueba">VERSIÓN DE PRUEBA · los datos no son los reales</div>
 
 <header>
-  <h1>Agenda de consultorio</h1>
+  <h1>Agenda · prueba</h1>
   <div class="fecha"><span id="hoyTexto"></span> · <button id="sincEstado" class="sincBtn">solo en este equipo</button></div>
 </header>
 
@@ -440,7 +533,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{
   <button data-tab="agenda" aria-current="page">
     <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>Agenda</button>
   <button data-tab="dia">
-    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 1.8"/></svg>Día</button>
+    <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18M8 15h3M8 18h3"/></svg>Calendario</button>
   <a class="navLink" href="tablero.html">
     <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11M15 9v11"/></svg><span class="corto">Horario</span><span class="largo">Horario general</span></a>
   <button data-tab="pacientes">
@@ -465,7 +558,10 @@ input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{
    ========================================================================== */
 const CONSULTORIO = {
   clienteId: "502751961059-7f8nr0fsnbfgccvae0td1qshs0dihkle.apps.googleusercontent.com",
-  hojaId:    "1gs_xYxJKDtrOfpZ6r1eUWm-9GKdJNP6n_gOiEZrlVB8",
+  /* VACÍO A PROPÓSITO: sin planilla, la versión de prueba no publica reservas
+     que verían las demás psicólogas. Si querés probar el consultorio
+     compartido, creá una planilla aparte y pegá su ID acá — nunca la real. */
+  hojaId:    "",
 
   /* Identificadores de quienes administran el cobro de las salas. Solo a ellas
      les aparece el módulo de alquiler; a las inquilinas no se les dibuja nada.
@@ -482,7 +578,7 @@ function esAdministradora(){
 }
 
 /* ============ almacenamiento ============ */
-const CLAVE = "agenda_consultorio_v1";
+const CLAVE = "agenda_consultorio_PRUEBA";
 const Store = {
   async cargar(){
     if (window.storage && window.storage.get){
@@ -573,8 +669,8 @@ async function persistir(urgente){
 }
 
 /* ============ sincronización con Google Drive ============ */
-const ARCHIVO = "agenda-consultorio.json";
-const CLAVE_TOKEN = "agenda_sesion_google";
+const ARCHIVO = "agenda-consultorio-PRUEBA.json";
+const CLAVE_TOKEN = "agenda_sesion_google_PRUEBA";
 const ALCANCE = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets";
 
 function mezclarLista(a, b, borrados){
@@ -1061,6 +1157,8 @@ function seCobra(c){
   return false;
 }
 const activa = c => c.estado !== "cancelada";
+/* Lunes de la semana que contiene esa fecha (la semana arranca en lunes). */
+function lunesDe(f){ const d=fecha(f); const w=(d.getDay()+6)%7; return sumarDias(f,-w); }
 
 /* Ocupación real de una sala en un día: mis reservas más las de las demás.
    Devuelve solo hora, duración y de quién es; nunca datos de pacientes ajenos. */
@@ -1148,6 +1246,7 @@ let filtro = "hoy";
 let busqueda = "";
 let mesSel = hoyISO().slice(0,7);
 let diaSel = hoyISO();
+let modoCal = "dia";          // dia | semana | mes  (pestaña Calendario)
 
 function irA(t){
   tab = t;
@@ -1175,7 +1274,7 @@ function render(){
   $("#fab").style.display = (tab==="agenda"||tab==="pacientes"||tab==="dia") ? "block" : "none";
   $("#fab").setAttribute("aria-label", tab==="pacientes" ? "Agregar paciente" : "Agendar consulta");
   if (tab==="agenda") vistaAgenda();
-  else if (tab==="dia") vistaDia();
+  else if (tab==="dia") vistaCalendario();
   else if (tab==="pacientes") vistaPacientes();
   else if (tab==="mes") vistaMes();
   else vistaAjustes();
@@ -1286,7 +1385,7 @@ function menuConsulta(id){
     <button class="btn sec" id="mCerrar">Cancelar</button>`);
   $("#mMover").onclick = ()=> reprogramar(id);
   $("#mEdit").onclick = ()=> formConsulta(id);
-  $("#mDia").onclick = ()=>{ diaSel = c.fecha; cerrar(); irA("dia"); window.scrollTo(0,0); render(); };
+  $("#mDia").onclick = ()=>{ diaSel = c.fecha; modoCal = "dia"; cerrar(); irA("dia"); window.scrollTo(0,0); render(); };
   $("#mFicha").onclick = ()=> fichaPaciente(c.pacienteId);
   $("#mCerrar").onclick = cerrar;
   $("#mAnular").onclick = async ()=>{
@@ -1492,6 +1591,146 @@ function formConsulta(id, pre){
 const cap = s => String(s).charAt(0).toUpperCase() + String(s).slice(1);
 const estadoTxt = e => e==="asistio" ? "asistió" : (e==="falto" ? "faltó" : (e==="cancelada" ? "cancelada" : "pendiente"));
 
+/* ---- pestaña Calendario: día, semana o mes, siempre con MIS pacientes ---- */
+function selectorCal(){
+  return `<div class="kModo">
+    ${[["dia","Día"],["semana","Semana"],["mes","Mes"]].map(([k,t])=>
+      `<button data-modo="${k}" aria-pressed="${modoCal===k}">${t}</button>`).join("")}
+  </div>`;
+}
+function conectarSelectorCal(){
+  document.querySelectorAll("[data-modo]").forEach(b=> b.onclick = ()=>{
+    modoCal = b.dataset.modo; window.scrollTo(0,0); vistaCalendario();
+  });
+}
+
+function vistaCalendario(){
+  if (modoCal === "semana") vistaSemanaPropia();
+  else if (modoCal === "mes") vistaMesPropio();
+  else vistaDia();
+}
+
+/* Bloques de la semana: solo consultas propias, con el nombre del paciente. */
+function vistaSemanaPropia(){
+  const lun = lunesDe(diaSel);
+  const todos = []; for (let i=0;i<7;i++) todos.push(sumarDias(lun,i));
+  const rango = new Set(todos);
+  const sem = db.consultas.filter(c => rango.has(c.fecha));
+  const dias = todos.filter((d,i)=> i < 5 || sem.some(c=>c.fecha===d));
+
+  let desde = minutos(db.config.horaInicio || "08:00");
+  let hasta = minutos(db.config.horaFin || "20:00");
+  if (hasta <= desde) hasta = Math.min(1440, desde + 60);
+  sem.forEach(c=>{
+    desde = Math.min(desde, minutos(c.hora));
+    hasta = Math.max(hasta, minutos(c.hora) + durDe(c));
+  });
+  desde = Math.floor(desde/60)*60; hasta = Math.ceil(hasta/60)*60;
+  const filas = (hasta - desde)/30;
+  const alto = f => `calc(var(--kfila) * ${f})`;
+
+  let horas = "";
+  for (let m=desde; m<hasta; m+=60) horas += `<div class="num">${aHora(m)}</div>`;
+
+  const cols = dias.map(d=>{
+    const finde = [0,6].indexOf(fecha(d).getDay()) >= 0;
+    const bloques = sem.filter(c=>c.fecha===d).map(c=>{
+      const ini = minutos(c.hora), fin = ini + durDe(c);
+      const top = (ini - desde)/30, h = Math.max(1, durDe(c)/30);
+      const chico = durDe(c) < 45;
+      return `<div class="kB s-${salaDe(c.sala).id} ${c.estado}" data-cita="${c.id}"
+        style="top:${alto(top)};height:calc(${alto(h)} - 2px)">
+        <b>${esc(pilaDe(c.pacienteId) || nombreDe(c.pacienteId))}</b>
+        ${chico?"":`<span class="num">${esc(c.hora)}–${aHora(fin)}</span>`}</div>`;
+    }).join("");
+    return `<div class="kCol${finde?" kFinde":""}${d===hoyISO()?" kHoy":""}" style="height:${alto(filas)}">${bloques}</div>`;
+  }).join("");
+
+  const cab = dias.map(d=>{
+    const dd = fecha(d), finde = [0,6].indexOf(dd.getDay()) >= 0;
+    return `<div class="kD${finde?" kFinde":""}${d===hoyISO()?" kHoy":""}" data-ir="${d}">
+      <div class="kSem">${DIAS_C[dd.getDay()]}</div><div class="kFec num">${dd.getDate()}</div></div>`;
+  }).join("");
+
+  const a = fecha(dias[0]), z = fecha(dias[dias.length-1]);
+  const rot = a.getMonth() === z.getMonth()
+    ? `${a.getDate()} – ${z.getDate()} de ${MESES[z.getMonth()]}`
+    : `${a.getDate()} de ${MESES[a.getMonth()]} – ${z.getDate()} de ${MESES[z.getMonth()]}`;
+  const esta = lunesDe(hoyISO()) === todos[0];
+  const activas = sem.filter(activa).length;
+
+  $("#vista").innerHTML = selectorCal() + `
+    <div class="diaNav">
+      <button id="kAnt" aria-label="Semana anterior">‹</button>
+      <div class="rot">${rot}</div>
+      <button id="kSig" aria-label="Semana siguiente">›</button>
+    </div>
+    <div class="resumen">
+      <span><b>${activas}</b> consulta${activas===1?"":"s"} tuya${activas===1?"":"s"}</span>
+      ${esta ? "<span>esta semana</span>" : `<span id="kHoy" style="color:var(--pine);font-weight:600;cursor:pointer">Ir a hoy</span>`}
+    </div>
+    <div class="kMarco"><div class="kScroll"><div class="kRej" style="--kcols:${dias.length};--kfila:24px">
+      <div class="kEnc"><div class="kEsq"></div>${cab}</div>
+      <div class="kCuerpo"><div class="kHoras">${horas}</div>${cols}</div>
+    </div></div></div>
+    <div class="ocupadas">Solo tus consultas. Tocá una para abrirla, o un día para verlo completo.</div>`;
+
+  conectarSelectorCal();
+  $("#kAnt").onclick = ()=>{ diaSel = sumarDias(lun,-7); vistaSemanaPropia(); };
+  $("#kSig").onclick = ()=>{ diaSel = sumarDias(lun, 7); vistaSemanaPropia(); };
+  if (!esta) $("#kHoy").onclick = ()=>{ diaSel = hoyISO(); vistaSemanaPropia(); };
+  document.querySelectorAll("[data-ir]").forEach(x=> x.onclick = ()=>{
+    diaSel = x.dataset.ir; modoCal = "dia"; vistaCalendario();
+  });
+  document.querySelectorAll(".kB[data-cita]").forEach(x=>
+    x.onclick = ()=> menuConsulta(x.dataset.cita));
+}
+
+function vistaMesPropio(){
+  const base = fecha(diaSel);
+  const y = base.getFullYear(), m = base.getMonth();
+  const primero = new Date(y, m, 1);
+  const arranque = sumarDias(iso(primero), -((primero.getDay()+6)%7));
+  const celdas = []; for (let i=0;i<42;i++) celdas.push(sumarDias(arranque,i));
+  if (celdas[35] && fecha(celdas[35]).getMonth() !== m) celdas.length = 35;
+
+  const cabs = DIAS_C.slice(1).concat(DIAS_C[0]).map(d=>`<div>${d}</div>`).join("");
+  const tope = 3;
+  const cuerpo = celdas.map(d=>{
+    const dd = fecha(d), fuera = dd.getMonth() !== m;
+    const delDia = ordenar(db.consultas.filter(c=>c.fecha===d));
+    const evs = delDia.slice(0,tope).map(c=>
+      `<div class="kEv s-${salaDe(c.sala).id} ${c.estado==="cancelada"?"cancelada":""}"
+        >${esc(c.hora)} ${esc(pilaDe(c.pacienteId) || nombreDe(c.pacienteId))}</div>`).join("");
+    const resto = delDia.length > tope ? `<div class="kMas">+${delDia.length-tope} más</div>` : "";
+    return `<div class="kCel${fuera?" kFuera":""}${d===hoyISO()?" kHoy":""}" data-ir="${d}">
+      <div class="kN num">${dd.getDate()}</div>${evs}${resto}</div>`;
+  }).join("");
+
+  const total = db.consultas.filter(c=>String(c.fecha).slice(0,7)===diaSel.slice(0,7) && activa(c)).length;
+
+  $("#vista").innerHTML = selectorCal() + `
+    <div class="diaNav">
+      <button id="kAnt" aria-label="Mes anterior">‹</button>
+      <div class="rot">${cap(MESES[m])} ${y}</div>
+      <button id="kSig" aria-label="Mes siguiente">›</button>
+    </div>
+    <div class="resumen">
+      <span><b>${total}</b> consulta${total===1?"":"s"} tuya${total===1?"":"s"} este mes</span>
+      <span id="kHoy" style="color:var(--pine);font-weight:600;cursor:pointer">Ir a hoy</span>
+    </div>
+    <div class="kMes"><div class="kMesCab">${cabs}</div><div class="kMesRej">${cuerpo}</div></div>
+    <div class="ocupadas">Solo tus consultas. Tocá un día para verlo completo.</div>`;
+
+  conectarSelectorCal();
+  $("#kAnt").onclick = ()=>{ diaSel = iso(new Date(y, m-1, 1)); vistaMesPropio(); };
+  $("#kSig").onclick = ()=>{ diaSel = iso(new Date(y, m+1, 1)); vistaMesPropio(); };
+  $("#kHoy").onclick = ()=>{ diaSel = hoyISO(); vistaMesPropio(); };
+  document.querySelectorAll("[data-ir]").forEach(x=> x.onclick = ()=>{
+    diaSel = x.dataset.ir; modoCal = "dia"; vistaCalendario();
+  });
+}
+
 function vistaDia(){
   const paso = Math.max(10, parseInt(db.config.paso,10) || 30);
 
@@ -1547,7 +1786,7 @@ function vistaDia(){
   const totMias = mias.filter(activa).length;
   const totAjenas = ajenasHoy.length;
 
-  $("#vista").innerHTML = `
+  $("#vista").innerHTML = selectorCal() + `
     <div class="diaNav">
       <button id="dAnt" aria-label="Día anterior">‹</button>
       <div class="rot">${cap(larga(diaSel))}<input type="date" id="dFecha" value="${diaSel}" aria-label="Elegir día"></div>
@@ -1569,6 +1808,7 @@ function vistaDia(){
       `<b class="num">${esc(c.hora)}</b> <span data-cita="${c.id}" style="text-decoration:underline">${esc(nombreDe(c.pacienteId))}</span>`).join(" · ")}</div>` : ""}
     <div class="ocupadas">Tocá un hueco libre para reservar esa sala. De las demás psicólogas solo ves el nombre y el horario, nunca sus pacientes.</div>`;
 
+  conectarSelectorCal();
   $("#dAnt").onclick = ()=>{ diaSel = sumarDias(diaSel,-1); vistaDia(); };
   $("#dSig").onclick = ()=>{ diaSel = sumarDias(diaSel, 1); vistaDia(); };
   $("#dFecha").onchange = e=>{ diaSel = e.target.value || diaSel; vistaDia(); };
