@@ -1505,13 +1505,36 @@ function formConsulta(id, pre){
     <div id="fOcup"></div>
     <label for="fNotas">Nota (opcional)</label>
     <input type="text" id="fNotas" value="${c?esc(c.notas||""):""}" placeholder="Motivo, sala, observación">
-    ${c?"":`<label class="check"><input type="checkbox" id="fRep"> Repetir todas las semanas</label>
-      <div id="fRepN" style="display:none"><label for="fSem">¿Cuántas sesiones en total?</label>
-      <input type="number" id="fSem" value="4" min="2" max="52" inputmode="numeric"></div>`}
+    ${c?"":`<label class="check"><input type="checkbox" id="fRep"> Repetir la consulta</label>
+      <div id="fRepN" style="display:none">
+        <label for="fCada">Cada cuánto</label>
+        <select id="fCada">
+          <option value="7">Todas las semanas</option>
+          <option value="14">Cada 15 días</option>
+        </select>
+        <label for="fSem">¿Cuántas sesiones en total?</label>
+        <input type="number" id="fSem" value="4" min="2" max="52" inputmode="numeric">
+        <div class="sub" id="fHasta" style="margin:6px 0 0"></div>
+      </div>`}
     <button class="btn" id="fGuardar">${c?"Guardar cambios":"Agendar"}</button>
     <button class="btn sec" id="fCancelar">Cancelar</button>`);
   if (!c){
-    $("#fRep").onchange = e => { $("#fRepN").style.display = e.target.checked ? "block" : "none"; };
+    const pintarSerie = ()=>{
+      if (!$("#fRep").checked){ $("#fHasta").textContent = ""; return; }
+      const cada = parseInt($("#fCada").value,10) || 7;
+      const n = Math.min(52, Math.max(1, parseInt($("#fSem").value,10) || 1));
+      const f = $("#fFecha").value;
+      if (!f) return;
+      $("#fHasta").textContent = "De la primera a la última: " + corta(f) +
+        " a " + corta(sumarDias(f, (n-1)*cada)) + ".";
+    };
+    $("#fRep").onchange = e => {
+      $("#fRepN").style.display = e.target.checked ? "block" : "none";
+      pintarSerie();
+    };
+    $("#fCada").onchange = pintarSerie;
+    $("#fSem").oninput = pintarSerie;
+    $("#fFecha").addEventListener("change", pintarSerie);
   }
   function pintarOcupadas(){
     const f = $("#fFecha").value;
@@ -1546,8 +1569,9 @@ function formConsulta(id, pre){
     };
     if (!datos.fecha || !datos.hora){ toast("Completá fecha y hora"); return; }
 
-    const rep = (!c && $("#fRep").checked) ? Math.min(52, Math.max(1, parseInt($("#fSem").value,10)||1)) : 1;
-    const fechas = []; for (let i=0;i<rep;i++) fechas.push(sumarDias(datos.fecha, i*7));
+    const rep  = (!c && $("#fRep").checked) ? Math.min(52, Math.max(1, parseInt($("#fSem").value,10)||1)) : 1;
+    const cada = (!c && $("#fRep").checked) ? (parseInt($("#fCada").value,10) || 7) : 7;
+    const fechas = []; for (let i=0;i<rep;i++) fechas.push(sumarDias(datos.fecha, i*cada));
 
     const desde = minutos(datos.hora), hasta = desde + datos.dur;
     const choques = [];
