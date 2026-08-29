@@ -274,9 +274,21 @@ const SALAS = [
   { id:"naranja", nombre:"Naranja", color:"#C96A17" },
   { id:"azul",    nombre:"Azul",    color:"#2A6099" }
 ];
-/* Un color por psicóloga, estable: el mismo nombre da siempre el mismo tono.
-   La sala ya se distingue por la sección, así que el color codifica la persona. */
-const TONOS = ["#1F7A5C","#2A6099","#8E4585","#B4462F","#C98A17","#4A6B8A","#7A6A3E","#A6547A"];
+/* Un color por psicóloga. Se asignan por posición alfabética, no por hash:
+   el hash repetía tonos con pocas personas (Pablo y Emma caían en el mismo).
+   Ninguno es azul ni naranja, para no confundirlos con los nombres de las
+   salas. Verificado: contraste >4.5 sobre blanco, >30° de matiz respecto de
+   cada sala y >25° entre sí. Son 7 porque, con las dos salas ocupando su
+   franja, no entran más sin que se parezcan; si algún día son más de 7
+   psicólogas hay que repensar la codificación, no estirar la lista. */
+const TONOS = ["#1F7A5C", "#B03A6E", "#7A3E9D", "#5F7326", "#A05195", "#2F6B3A", "#5A5A5A"];
+
+let colorPorProf = new Map();
+function asignarColores(){
+  const nombres = [...new Set(reservas.map(r=>r.prof))].sort((a,b)=>a.localeCompare(b));
+  colorPorProf = new Map();
+  nombres.forEach((n,i)=> colorPorProf.set(n, TONOS[i % TONOS.length]));
+}
 
 const DIAS = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
 const DIAS_C = ["dom","lun","mar","mié","jue","vie","sáb"];
@@ -300,10 +312,7 @@ function lunesDe(s){ const d=fecha(s); const w=(d.getDay()+6)%7; return sumar(s,
 const salaDe = id => SALAS.find(x=>x.id===id) || SALAS[0];
 
 function tonoDe(nombre){
-  let h = 0;
-  const s = String(nombre||"");
-  for (let i=0;i<s.length;i++) h = (h*31 + s.charCodeAt(i)) >>> 0;
-  return TONOS[h % TONOS.length];
+  return colorPorProf.get(nombre) || TONOS[TONOS.length-1];
 }
 
 /* ---------- estado ---------- */
@@ -434,6 +443,7 @@ async function cargar(interactivo){
   $("#progreso").className = "cargando";
   try{
     reservas = interpretar(await Datos.traer(interactivo));
+    asignarColores();
     ultima = Date.now();
   }catch(e){
     problema = e;

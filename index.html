@@ -1146,6 +1146,20 @@ const activa = c => c.estado !== "cancelada";
 /* Lunes de la semana que contiene esa fecha (la semana arranca en lunes). */
 function lunesDe(f){ const d=fecha(f); const w=(d.getDay()+6)%7; return sumarDias(f,-w); }
 
+/* ¿El filtro de la Agenda muestra esa fecha? Se usa después de agendar: si la
+   consulta nueva no entra en el filtro activo, la pantalla quedaba igual que
+   antes y parecía que no se había guardado. */
+function filtroMuestra(f, cual){
+  const hoy = hoyISO();
+  if (cual === "todas") return true;
+  if (cual === "hoy") return f === hoy;
+  if (cual === "manana") return f === sumarDias(hoy,1);
+  if (cual === "semana") return f >= hoy && f <= sumarDias(hoy,7);
+  if (cual === "proximas") return f >= hoy;
+  if (cual === "pasadas") return f < hoy;
+  return true;
+}
+
 /* Ocupación real de una sala en un día: mis reservas más las de las demás.
    Devuelve solo hora, duración y de quién es; nunca datos de pacientes ajenos. */
 function ocupacionDe(fecha, sala, exceptoId){
@@ -1591,9 +1605,18 @@ function formConsulta(id, pre){
 
     await persistir(true); cerrar();
     if (tab === "dia") diaSel = datos.fecha;
-    else if (tab !== "agenda") irA("agenda");
+    else {
+      if (tab !== "agenda") irA("agenda");
+      // Si el filtro activo no la muestra, se cambia al que sí: agendar para
+      // otro día dejaba la pantalla intacta y parecía que no había guardado.
+      if (!filtroMuestra(datos.fecha, filtro))
+        filtro = datos.fecha < hoyISO() ? "pasadas" : "proximas";
+    }
     render();
-    toast(c ? "Consulta actualizada" : (rep>1 ? rep+" consultas agendadas" : "Consulta agendada"));
+    const cuando = " · " + diaCorto(datos.fecha) + " " + corta(datos.fecha) + " " + datos.hora;
+    toast(c ? "Consulta actualizada" + cuando
+            : (rep>1 ? rep + " consultas, desde el " + corta(datos.fecha)
+                     : "Agendada" + cuando));
   };
 }
 
