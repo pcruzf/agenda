@@ -1493,8 +1493,13 @@ function formConsulta(id, pre){
     return;
   }
   const c = id ? db.consultas.find(x=>x.id===id) : null;
+  /* El paciente puede venir de la consulta que se edita o de `pre` (al agendar
+     desde su ficha). Antes se asignaba por código después de dibujar, lo que
+     NO dispara el evento change: el importe quedaba con el arancel del primero
+     de la lista y se guardaba el precio equivocado. */
+  const pacSel = c ? c.pacienteId : (pre && pre.pacienteId) || "";
   const ops = db.pacientes.slice().sort((a,b)=>nombreLargo(a).localeCompare(nombreLargo(b)))
-    .map(p=>`<option value="${p.id}" ${c&&c.pacienteId===p.id?"selected":""}>${esc(nombreLargo(p))}</option>`).join("");
+    .map(p=>`<option value="${p.id}" ${pacSel===p.id?"selected":""}>${esc(nombreLargo(p))}</option>`).join("");
   abrir(`<h3>${c?"Editar consulta":"Nueva consulta"}</h3>
     <label for="fPac">Paciente</label>
     <select id="fPac">${ops}</select>
@@ -1582,6 +1587,18 @@ function formConsulta(id, pre){
       notas: $("#fNotas").value.trim()
     };
     if (!datos.fecha || !datos.hora){ toast("Completá fecha y hora"); return; }
+
+    /* Red de seguridad: si el importe quedó con el arancel de OTRO paciente
+       (pasaba al abrir el formulario desde una ficha), se corrige acá antes de
+       guardar. Un importe editado a mano se respeta: solo se toca cuando
+       coincide exacto con el arancel de otra persona y no con el del elegido. */
+    if (!c && datos.monto !== ""){
+      const elegido = paciente(datos.pacienteId);
+      const suyo = elegido && Number(elegido.arancel) ? Number(elegido.arancel) : null;
+      if (suyo && datos.monto !== suyo &&
+          db.pacientes.some(o => o.id !== datos.pacienteId && Number(o.arancel) === datos.monto))
+        datos.monto = suyo;
+    }
 
     const rep  = (!c && $("#fRep").checked) ? Math.min(52, Math.max(1, parseInt($("#fSem").value,10)||1)) : 1;
     const cada = (!c && $("#fRep").checked) ? (parseInt($("#fCada").value,10) || 7) : 7;
@@ -1945,7 +1962,7 @@ function fichaPaciente(id){
   $("#xCerrar").onclick = cerrar;
   $("#xEditar").onclick = ()=> formPaciente(id);
   $("#xVarias").onclick = ()=> variasConsultas(id);
-  $("#xAgendar").onclick = ()=>{ cerrar(); formConsulta(); setTimeout(()=>{ const s=$("#fPac"); if(s) s.value=id; },60); };
+  $("#xAgendar").onclick = ()=>{ cerrar(); formConsulta(null, { pacienteId: id }); };
   $("#xBorrar").onclick = async ()=>{
     if (!confirm("Se elimina el paciente y todas sus consultas. ¿Seguir?")) return;
     db.consultas.filter(c=>c.pacienteId===id).forEach(c=> tumba(c.id));
